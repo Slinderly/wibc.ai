@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wibc.ai - Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+</head>
+<body class="dashboard-bg">
+    <nav class="sidebar glassmorphism">
+        <h1 class="logo">wibc<span class="highlight">.ai</span></h1>
+        <ul class="nav-links">
+            <li class="active" data-view="products">🛍️ Productos</li>
+            <li data-view="ai-config">🧠 Inteligencia Artificial</li>
+            <li data-view="manual-bot">⚙️ Automatización Manual</li>
+            <li data-view="whatsapp">📱 Conexión WhatsApp</li>
+        </ul>
+        <button id="logoutBtn" class="btn-outline">Cerrar Sesión</button>
+    </nav>
+
+    <main class="content">
+        <!-- Products View -->
+        <section id="view-products" class="view-section active">
+            <h2>Gestión de Productos</h2>
+            <div class="card glassmorphism">
+                <form id="productForm" class="flex-form">
+                    <input type="text" id="prodName" placeholder="Nombre del producto" required>
+                    <input type="number" id="prodPrice" placeholder="Precio" required>
+                    <input type="text" id="prodDesc" placeholder="Descripción breve" required>
+                    <button type="submit" class="btn-primary">Añadir Producto</button>
+                </form>
+            </div>
+            
+            <div id="productsList" class="products-grid">
+                <!-- Productos inyectados por JS -->
+            </div>
+        </section>
+
+        <!-- AI Config View -->
+        <section id="view-ai-config" class="view-section">
+            <h2>Configuración de Inteligencia Artificial</h2>
+            <div class="card glassmorphism">
+                <form id="aiForm">
+                    <div class="input-group">
+                        <label for="botMode">Modo del Bot Activo</label>
+                        <select id="botMode" style="width:100%; padding:12px; border-radius:8px; background:rgba(15,23,42,0.6); color:var(--text); border:1px solid var(--glass-border);">
+                            <option value="ai">🧠 Usar Inteligencia Artificial</option>
+                            <option value="manual">⚙️ Usar Solo Reglas Manuales</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="apiKey">API Key (OpenAI / Tu Proveedor)</label>
+                        <input type="text" id="apiKey" placeholder="sk-...">
+                    </div>
+                    <div class="input-group">
+                        <label for="aiPrompt">Prompt Principal (Personalidad del Bot)</label>
+                        <textarea id="aiPrompt" rows="4" placeholder="Eres un asistente de ventas amable..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="aiContext">Prompts Constantes / Contexto Extra</label>
+                        <textarea id="aiContext" rows="3" placeholder="Ej: No ofrezcas descuentos mayores a 10%, recuerda siempre despedirte..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Guardar Configuración</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Manual Bot View -->
+        <section id="view-manual-bot" class="view-section">
+            <h2>Automatización Manual (Sin IA)</h2>
+            <p style="margin-bottom: 20px; color: var(--text-muted);">Define reglas de respuesta automática por palabras clave para cuando el modo IA esté apagado.</p>
+            <div class="card glassmorphism">
+                <form id="ruleForm" class="flex-form">
+                    <input type="text" id="ruleKeyword" placeholder="Palabra clave o frase (ej: hola)" required>
+                    <input type="text" id="ruleReply" placeholder="Respuesta automática del bot" required>
+                    <button type="submit" class="btn-primary">Añadir Regla</button>
+                </form>
+            </div>
+            <div id="rulesList" class="products-grid">
+                <!-- Reglas inyectadas por JS -->
+            </div>
+        </section>
+
+        <!-- WhatsApp View -->
+        <section id="view-whatsapp" class="view-section">
+            <h2>Conexión a WhatsApp</h2>
+            <div class="card glassmorphism text-center">
+                <p>Escanea el código QR con tu WhatsApp para conectar el Bot de Ventas.</p>
+                <button id="startBotBtn" class="btn-primary" style="margin-bottom: 20px;">Iniciar Bot</button>
+                
+                <div id="qrContainer" class="qr-box">
+                    <div id="qrcode"></div>
+                    <div id="qrStatus">Bot inactivo.</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/dashboard.js"></script>
+</body>
+</html>
