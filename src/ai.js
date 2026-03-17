@@ -67,27 +67,19 @@ const generateAIResponse = async (userId, incomingMessage) => {
                 return;
             } catch (error) {
                 console.error("[wibc.ai] 🔴 Error:", error);
-                resolve("🤖 [Error de IA] Lo siento, hubo un problema procesando tu mensaje con el proveedor de IA. Revisa tu API Key.");
+                resolve("🤖 [Wibc.ai] Lo siento, hubo un problema procesando tu mensaje con el proveedor de IA. Revisa tu API Key.");
                 return;
             }
         }
         
-        // --- FALLBACK: MODO IA SIMULADA (Si no hay API KEY) ---
-        let response = `🤖 [IA Simulada - Sin API Key]\n**Prompt:** ${aiConfig.prompt}\n\n`;
-        
-        if (products && products.length > 0) {
-            // Lógica simple manual
-            if (incomingMessage.toLowerCase().includes('precio') || incomingMessage.toLowerCase().includes('producto')) {
-                response += "Aquí tienes nuestros productos:\n";
-                products.forEach(p => {
-                    response += `- ${p.name}: $${p.price}\n  (${p.description})\n`;
-                });
-            } else {
-                response += "¡Hola! Pregúntame por productos o precios.";
-            }
-        } else {
-             response += "Actualmente no tenemos productos en stock.";
-        }
+       // --- FALLBACK: CONFIGURACIÓN REQUERIDA ---
+let response = "⚠️ *Configuración Pendiente*\n\n";
+response += "Wibc.ai necesita una **API Key** para funcionar con Inteligencia Artificial.\n\n";
+response += "🔧 *Opciones:* \n";
+response += "1. Configura el bot aquí: https://wibc.up.railway.app/\n";
+response += "2. Si prefieres usarlo **sin IA**, puedes modificar el bot manualmente desde el código.\n\n";
+response += "💬 *¿Necesitas ayuda para conseguir una clave API?*\n";
+response += "Escríbeme al: +591 64770568";
 
         setTimeout(() => { resolve(response); }, 800);
     });
