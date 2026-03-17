@@ -15,7 +15,15 @@ const generateAIResponse = async (userId, incomingMessage) => {
         const userDataPath = path.join(__dirname, `../data/user_data/${userId}.json`);
         
         if (!fs.existsSync(userDataPath)) {
-            resolve("Lo siento, la tienda no está configurada aún.");
+            let errorMsg = "🤖 *Aviso del Sistema*\n\n";
+            errorMsg += "Lo siento, la tienda no está configurada aún.\n\n";
+            errorMsg += "🔧 *¿Qué puedes hacer?*\n";
+            errorMsg += "1. Configura tu bot aquí: https://wibc.up.railway.app/\n";
+            errorMsg += "2. Si prefieres usarlo **sin IA**, puedes modificar el bot manualmente.\n\n";
+            errorMsg += "💬 *¿Necesitas ayuda para conseguir una clave API?*\n";
+            errorMsg += "Escríbeme al: +591 64770568";
+            
+            resolve(errorMsg);
             return;
         }
 
