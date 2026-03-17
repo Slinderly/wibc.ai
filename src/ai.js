@@ -18,7 +18,7 @@ const generateAIResponse = async (userId, incomingMessage) => {
             let errorMsg = "🤖 *Aviso del Sistema*\n\n";
             errorMsg += "Lo siento, la tienda no está configurada aún.\n\n";
             errorMsg += "🔧 *¿Qué puedes hacer?*\n";
-            errorMsg += "1. Configura tu bot aquí: https://wibc.up.railway.app/\n";
+            errorMsg += "1. Configura tu bot aquí: https://wibca.up.railway.app/\n";
             errorMsg += "2. Si prefieres usarlo **sin IA**, puedes modificar el bot manualmente.\n\n";
             errorMsg += "💬 *¿Necesitas ayuda para conseguir una clave API?*\n";
             errorMsg += "Escríbeme al: +591 64770568";
@@ -84,7 +84,7 @@ const generateAIResponse = async (userId, incomingMessage) => {
 let response = "⚠️ *Configuración Pendiente*\n\n";
 response += "Wibc.ai necesita una **API Key** para funcionar con Inteligencia Artificial.\n\n";
 response += "🔧 *Opciones:* \n";
-response += "1. Configura el bot aquí: https://wibc.up.railway.app/\n";
+response += "1. Configura el bot aquí: https://wibca.up.railway.app/\n";
 response += "2. Si prefieres usarlo **sin IA**, puedes modificar el bot manualmente desde el código.\n\n";
 response += "💬 *¿Necesitas ayuda para conseguir una clave API?*\n";
 response += "Escríbeme al: +591 64770568";
