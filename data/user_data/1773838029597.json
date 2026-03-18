@@ -1,0 +1,16 @@
+{
+  "products": [],
+  "aiConfig": {
+    "apiKey": "",
+    "prompt": "",
+    "context": ""
+  },
+  "botMode": "ai",
+  "manualRules": [
+    {
+      "id": "1773844799453",
+      "keyword": "Abcd",
+      "reply": "Cdef"
+    }
+  ]
+}
