@@ -142,27 +142,82 @@ router.post('/rename', requireAuth, (req, res) => {
     }
 });
 
-// ── Logs ──
-router.get('/logs', requireAuth, (req, res) => {
-    try {
-        const logDir = '/tmp/logs';
-        if (!fs.existsSync(logDir)) return res.json({ logs: [] });
-
-        const files = fs.readdirSync(logDir)
-            .filter(f => f.endsWith('.log'))
-            .sort()
-            .reverse()
-            .slice(0, 5);
-
-        const logs = files.map(f => {
-            const content = fs.readFileSync(path.join(logDir, f), 'utf8');
-            return { file: f, content };
-        });
-
-        res.json({ logs });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
+// ── Logs SSE stream ──
+// Token passed as query param because EventSource doesn't support custom headers
+router.get('/logs/stream', (req, res) => {
+    const token = (req.query.token || '').trim();
+    if (!validTokens.has(token)) {
+        res.status(401).end(); return;
     }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const logDir = '/tmp/logs';
+    let lastFile = null;
+    let lastPos  = 0;
+
+    const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+    const tick = () => {
+        try {
+            if (!fs.existsSync(logDir)) return;
+            const files = fs.readdirSync(logDir)
+                .filter(f => f.endsWith('.log'))
+                .sort()
+                .reverse();
+            if (!files.length) return;
+
+            const latestPath = path.join(logDir, files[0]);
+
+            // New log file started — reset cursor, notify frontend
+            if (latestPath !== lastFile) {
+                lastFile = latestPath;
+                lastPos  = 0;
+                send({ type: 'clear', file: files[0] });
+            }
+
+            const size = fs.statSync(latestPath).size;
+            if (size <= lastPos) return;
+
+            const fd  = fs.openSync(latestPath, 'r');
+            const buf = Buffer.alloc(size - lastPos);
+            fs.readSync(fd, buf, 0, buf.length, lastPos);
+            fs.closeSync(fd);
+            lastPos = size;
+
+            const lines = buf.toString('utf8');
+            if (lines.trim()) send({ type: 'lines', content: lines });
+        } catch (_) {}
+    };
+
+    // Send last 100 lines of current log immediately
+    try {
+        if (fs.existsSync(logDir)) {
+            const files = fs.readdirSync(logDir).filter(f => f.endsWith('.log')).sort().reverse();
+            if (files.length) {
+                lastFile = path.join(logDir, files[0]);
+                const content = fs.readFileSync(lastFile, 'utf8');
+                const tail = content.split('\n').slice(-100).join('\n');
+                lastPos = fs.statSync(lastFile).size;
+                send({ type: 'clear', file: files[0] });
+                if (tail.trim()) send({ type: 'lines', content: tail + '\n' });
+            }
+        }
+    } catch (_) {}
+
+    const interval = setInterval(tick, 1500);
+
+    // Keep-alive ping every 20s to prevent proxy timeout
+    const ping = setInterval(() => res.write(': ping\n\n'), 20000);
+
+    req.on('close', () => {
+        clearInterval(interval);
+        clearInterval(ping);
+    });
 });
 
 module.exports = router;

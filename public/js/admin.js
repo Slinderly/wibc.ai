@@ -81,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             tab.classList.add('active');
             document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
-            if (tab.dataset.tab === 'logs') loadLogs();
         });
     });
 
@@ -262,25 +261,68 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('renameCancel').addEventListener('click', () => { renameModal.style.display = 'none'; });
     renameInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('renameConfirm').click(); });
 
-    // ── Logs ──
+    // ── Logs (SSE live stream) ──
     const logsContainer = document.getElementById('logsContainer');
-
-    const loadLogs = async () => {
-        logsContainer.innerHTML = '<p style="color:#666;">Cargando...</p>';
-        const r = await api('GET', 'logs');
-        if (!r.ok) { logsContainer.innerHTML = `<p style="color:#f66;">${r.data.error}</p>`; return; }
-
-        const { logs } = r.data;
-        if (!logs.length) { logsContainer.innerHTML = '<p style="color:#666;">No hay logs disponibles.</p>'; return; }
-
-        logsContainer.innerHTML = logs.map(l => `
-            <div class="log-section">
-                <div class="log-section-title">${l.file}</div>${escHtml(l.content)}
-            </div>`).join('');
-        logsContainer.scrollTop = logsContainer.scrollHeight;
-    };
-
-    document.getElementById('btnRefreshLogs').addEventListener('click', loadLogs);
+    let logES = null;
+    let autoScroll = true;
 
     const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // Auto-scroll only when user is near bottom
+    logsContainer.addEventListener('scroll', () => {
+        const nearBottom = logsContainer.scrollHeight - logsContainer.scrollTop - logsContainer.clientHeight < 80;
+        autoScroll = nearBottom;
+    });
+
+    const appendLines = (text) => {
+        const span = document.createElement('span');
+        span.textContent = text;
+        // Colorize log levels inline
+        span.innerHTML = escHtml(text)
+            .replace(/(\[.*?ERROR.*?\])/g, '<span style="color:#f87171;">$1</span>')
+            .replace(/(\[.*?WARN.*?\])/g,  '<span style="color:#fbbf24;">$1</span>')
+            .replace(/(\[wibc\.ai\])/g,    '<span style="color:#a78bfa;">$1</span>');
+        logsContainer.appendChild(span);
+        if (autoScroll) logsContainer.scrollTop = logsContainer.scrollHeight;
+    };
+
+    const connectLogStream = () => {
+        if (logES) { logES.close(); logES = null; }
+        logsContainer.innerHTML = '<span style="color:#555;">Conectando al stream de logs...</span>\n';
+        autoScroll = true;
+
+        logES = new EventSource(`/admin-api/logs/stream?token=${encodeURIComponent(token)}`);
+
+        logES.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.type === 'clear') {
+                logsContainer.innerHTML = '';
+                const header = document.createElement('span');
+                header.style.cssText = 'color:#9d4edd;font-weight:600;';
+                header.textContent = `── ${data.file} ──\n`;
+                logsContainer.appendChild(header);
+            } else if (data.type === 'lines') {
+                appendLines(data.content);
+            }
+        };
+
+        logES.onerror = () => {
+            // SSE auto-reconnects natively; just show a subtle indicator
+            const span = document.createElement('span');
+            span.style.color = '#555';
+            span.textContent = '\n[reconectando...]\n';
+            logsContainer.appendChild(span);
+        };
+    };
+
+    // Connect when switching to logs tab
+    document.querySelectorAll('.topbar-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            if (tab.dataset.tab === 'logs' && !logES) connectLogStream();
+            // Disconnect stream when leaving logs tab to save resources
+            if (tab.dataset.tab !== 'logs' && logES) { logES.close(); logES = null; }
+        });
+    });
+
+    document.getElementById('btnRefreshLogs').addEventListener('click', connectLogStream);
 });
