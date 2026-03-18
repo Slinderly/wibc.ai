@@ -165,7 +165,7 @@ const startBaileysWithPairingCode = async (userId, sessionId, phoneNumber) => {
             connStatus[key] = 'timeout';
             terminateSession(key);
         }
-    }, 60000);
+    }, 300000); // 5 minutos — el usuario necesita tiempo para ingresar el código
 
     return new Promise((resolve, reject) => {
         let codeRequested = false;

@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let phonePollInterval = null;
     let phoneCountdown = null;
     let activePhoneSessionId = null;
-    const PHONE_TIMEOUT_MS = 60000;
+    const PHONE_TIMEOUT_MS = 160000; // WhatsApp permite ~160 segundos para ingresar el código
 
     const resetPhonePanel = () => {
         clearInterval(phonePollInterval); clearInterval(phoneCountdown);
