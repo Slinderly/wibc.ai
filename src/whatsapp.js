@@ -1,33 +1,43 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 const path = require('path');
 const fs = require('fs');
-
 const { generateAIResponse } = require('./ai');
 
-// State maps – keyed by sessionKey = `${userId}:${sessionId}`
-const sessions       = {};
-const qrCodes        = {};
-const connStatus     = {};  // 'connecting' | 'connected' | 'disconnected' | 'timeout'
-const deviceInfo     = {};  // { phone, name, connectedAt }
-const wasConnected   = {};
-const userSessions   = {};  // userId -> Set of sessionIds
+// ── State ──────────────────────────────────────────────────────────────────
+const sockets    = {};  // key → socket instance
+const statuses   = {};  // key → 'connecting' | 'connected' | 'disconnected' | 'timeout'
+const qrMap      = {};  // key → raw QR string
+const deviceMap  = {};  // key → { phone, name, connectedAt }
+const everConn   = {};  // key → boolean (was ever connected in this run)
+const userSets   = {};  // userId → Set<sessionId>
 
-const makeKey = (userId, sessionId) => `${userId}:${sessionId}`;
+const makeKey  = (userId, sessionId) => `${userId}:${sessionId}`;
+const authDir  = (userId, sessionId) => path.join(__dirname, `../data/auth_${userId}_${sessionId}`);
 
-const authFolder = (userId, sessionId) =>
-    path.join(__dirname, `../data/auth_${userId}_${sessionId}`);
-
-// Terminate socket cleanly
-const terminateSession = (key) => {
-    try { if (sessions[key]) sessions[key].end(); } catch (_) {}
-    delete sessions[key];
-    delete qrCodes[key];
+// ── Get WA version (with fallback) ────────────────────────────────────────
+const getVersion = async () => {
+    try {
+        const { version } = await fetchLatestBaileysVersion();
+        console.log('[wibc.ai] Versión WA:', version.join('.'));
+        return version;
+    } catch (e) {
+        console.warn('[wibc.ai] fetchLatestBaileysVersion falló, usando fallback:', e.message);
+        return [2, 3000, 1015901307];
+    }
 };
 
-const createSocket = async (userId, sessionId) => {
-    const folder = authFolder(userId, sessionId);
+// ── Kill socket cleanly ────────────────────────────────────────────────────
+const killSocket = (k) => {
+    try { if (sockets[k]) sockets[k].end(); } catch (_) {}
+    delete sockets[k];
+    delete qrMap[k];
+};
+
+// ── Build a new socket (shared between QR and pairing flows) ───────────────
+const buildSocket = async (userId, sessionId) => {
+    const folder = authDir(userId, sessionId);
 
     if (fs.existsSync(folder) && !fs.existsSync(path.join(folder, 'creds.json'))) {
         fs.rmSync(folder, { recursive: true, force: true });
@@ -35,268 +45,266 @@ const createSocket = async (userId, sessionId) => {
     if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
 
     const { state, saveCreds } = await useMultiFileAuthState(folder);
+    const version = await getVersion();
+    const k = makeKey(userId, sessionId);
 
-    let version;
-    try {
-        const result = await fetchLatestBaileysVersion();
-        version = result.version;
-    } catch (_) {
-        version = [2, 3000, 1015901307];
-    }
-
-    const key = makeKey(userId, sessionId);
-
-    connStatus[key] = 'connecting';
+    statuses[k] = 'connecting';
+    console.log(`[wibc.ai] Creando socket ${k}`);
 
     const sock = makeWASocket({
-        auth: state,
         version,
+        auth: state,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
-        browser: ['WhatsApp', 'Chrome', '126.0.6478.127'],
+        browser: ['Ubuntu', 'Chrome', '22.04'],
         syncFullHistory: false,
-        connectTimeoutMs: 60000,
+        connectTimeoutMs: 60_000,
         defaultQueryTimeoutMs: 0,
-        qrTimeout: 60000,
     });
 
-    sessions[key] = sock;
+    sockets[k] = sock;
     sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages[0];
-        if (!msg || !msg.message || msg.key.fromMe) return;
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-        if (text) {
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg?.message || msg.key.fromMe) return;
+        const text =
+            msg.message.conversation ||
+            msg.message.extendedTextMessage?.text || '';
+        if (!text) return;
+        try {
             const reply = await generateAIResponse(userId, text);
             if (reply) await sock.sendMessage(msg.key.remoteJid, { text: reply });
+        } catch (e) {
+            console.error('[wibc.ai] AI error:', e.message);
         }
     });
 
     return sock;
 };
 
-const startBaileys = async (userId, sessionId) => {
-    const key = makeKey(userId, sessionId);
-    const folder = authFolder(userId, sessionId);
-    const isNew = !fs.existsSync(path.join(folder, 'creds.json'));
-    let qrTimeout = null;
+// ── QR flow ────────────────────────────────────────────────────────────────
+const connectQR = async (userId, sessionId) => {
+    const folder = authDir(userId, sessionId);
+    const isNew  = !fs.existsSync(path.join(folder, 'creds.json'));
 
-    // Track session for this user
-    if (!userSessions[userId]) userSessions[userId] = new Set();
-    userSessions[userId].add(sessionId);
+    if (!userSets[userId]) userSets[userId] = new Set();
+    userSets[userId].add(sessionId);
 
-    const sock = await createSocket(userId, sessionId);
-
-    if (isNew) {
-        qrTimeout = setTimeout(() => {
-            if (connStatus[key] !== 'connected') {
-                console.log(`[wibc.ai] Timeout QR ${key}`);
-                connStatus[key] = 'timeout';
-                delete qrCodes[key];
-                terminateSession(key);
-            }
-        }, 60000);
+    let sock;
+    try {
+        sock = await buildSocket(userId, sessionId);
+    } catch (err) {
+        console.error('[wibc.ai] buildSocket error:', err.message);
+        statuses[makeKey(userId, sessionId)] = 'disconnected';
+        return;
     }
 
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
+    const kk = makeKey(userId, sessionId);
+    let qrTimer = null;
 
+    if (isNew) {
+        qrTimer = setTimeout(() => {
+            if (statuses[kk] !== 'connected') {
+                console.log(`[wibc.ai] QR timeout ${kk}`);
+                statuses[kk] = 'timeout';
+                delete qrMap[kk];
+                killSocket(kk);
+            }
+        }, 60_000);
+    }
+
+    sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
         if (qr) {
-            qrCodes[key] = qr;
+            qrMap[kk] = qr;
+            console.log(`[wibc.ai] QR generado ${kk}`);
         }
 
         if (connection === 'close') {
-            clearTimeout(qrTimeout);
-            const code = (lastDisconnect?.error instanceof Boom)
-                ? lastDisconnect.error.output?.statusCode
-                : lastDisconnect.error?.statusCode;
+            clearTimeout(qrTimer);
+            delete qrMap[kk];
+            const code = lastDisconnect?.error instanceof Boom
+                ? lastDisconnect.error.output.statusCode
+                : lastDisconnect?.error?.statusCode;
 
-            delete qrCodes[key];
+            console.log(`[wibc.ai] Conexión cerrada ${kk} | código: ${code}`);
 
             if (code === DisconnectReason.loggedOut) {
-                console.log(`[wibc.ai] LoggedOut ${key}`);
-                connStatus[key] = 'disconnected';
-                wasConnected[key] = false;
-                delete deviceInfo[key];
+                statuses[kk] = 'disconnected';
+                everConn[kk] = false;
+                delete deviceMap[kk];
                 if (fs.existsSync(folder)) fs.rmSync(folder, { recursive: true, force: true });
-                userSessions[userId]?.delete(sessionId);
-            } else if (wasConnected[key]) {
-                connStatus[key] = 'disconnected';
-                console.log(`[wibc.ai] Reconectando ${key} en 5s...`);
-                setTimeout(() => startBaileys(userId, sessionId), 5000);
+                userSets[userId]?.delete(sessionId);
+            } else if (everConn[kk]) {
+                statuses[kk] = 'disconnected';
+                console.log(`[wibc.ai] Reconectando ${kk} en 5s...`);
+                setTimeout(() => connectQR(userId, sessionId), 5_000);
             } else {
-                connStatus[key] = 'disconnected';
-                console.log(`[wibc.ai] ${key} cerrado sin conectar. No se reintenta.`);
+                statuses[kk] = 'disconnected';
             }
 
         } else if (connection === 'open') {
-            clearTimeout(qrTimeout);
-            wasConnected[key] = true;
-            connStatus[key] = 'connected';
-            delete qrCodes[key];
-
-            const me = sock.authState?.creds?.me;
-            const rawPhone = me?.id ? me.id.split(':')[0].split('@')[0] : null;
-            deviceInfo[key] = {
-                phone: rawPhone || 'Desconocido',
-                name: me?.name || null,
-                connectedAt: new Date().toISOString(),
-            };
-            console.log(`[wibc.ai] Conectado ${key} (${deviceInfo[key].phone})`);
+            clearTimeout(qrTimer);
+            delete qrMap[kk];
+            everConn[kk] = true;
+            statuses[kk] = 'connected';
+            const me    = sock.authState?.creds?.me;
+            const phone = me?.id?.split(':')[0]?.split('@')[0] ?? 'Desconocido';
+            deviceMap[kk] = { phone, name: me?.name ?? null, connectedAt: new Date().toISOString() };
+            console.log(`[wibc.ai] ✅ Conectado QR ${kk} (${phone})`);
         }
     });
 };
 
-const startBaileysWithPairingCode = async (userId, sessionId, phoneNumber) => {
-    const key = makeKey(userId, sessionId);
-    const folder = authFolder(userId, sessionId);
+// ── Pairing Code flow ──────────────────────────────────────────────────────
+const connectPairing = async (userId, sessionId, phoneNumber) => {
+    const folder = authDir(userId, sessionId);
+    const kk     = makeKey(userId, sessionId);
 
+    // Always fresh for pairing
     if (fs.existsSync(folder)) fs.rmSync(folder, { recursive: true, force: true });
 
-    if (!userSessions[userId]) userSessions[userId] = new Set();
-    userSessions[userId].add(sessionId);
+    if (!userSets[userId]) userSets[userId] = new Set();
+    userSets[userId].add(sessionId);
 
-    const sock = await createSocket(userId, sessionId);
+    return new Promise(async (resolve, reject) => {
+        let codeObtained = false;
 
-    const sessionTimeout = setTimeout(() => {
-        if (connStatus[key] !== 'connected') {
-            console.log(`[wibc.ai] Timeout sesión pairing ${key}`);
-            connStatus[key] = 'timeout';
-            terminateSession(key);
+        // Keep socket alive 5 min (user needs time to enter code)
+        const aliveTimer = setTimeout(() => {
+            if (statuses[kk] !== 'connected') {
+                console.log(`[wibc.ai] Pairing timeout global ${kk}`);
+                statuses[kk] = 'timeout';
+                killSocket(kk);
+                userSets[userId]?.delete(sessionId);
+            }
+        }, 300_000);
+
+        // If QR never fires within 30s, something is wrong with the network
+        const noQRTimer = setTimeout(() => {
+            if (!codeObtained) {
+                clearTimeout(aliveTimer);
+                killSocket(kk);
+                statuses[kk] = 'disconnected';
+                userSets[userId]?.delete(sessionId);
+                reject(new Error('Sin respuesta de WhatsApp. Intenta de nuevo.'));
+            }
+        }, 30_000);
+
+        let sock;
+        try {
+            sock = await buildSocket(userId, sessionId);
+        } catch (err) {
+            clearTimeout(aliveTimer);
+            clearTimeout(noQRTimer);
+            return reject(err);
         }
-    }, 300000); // 5 minutos — el usuario necesita tiempo para ingresar el código
 
-    return new Promise((resolve, reject) => {
-        let codeRequested = false;
-
-        // requestPairingCode MUST be called when the 'qr' event fires —
-        // that is the exact moment WhatsApp is waiting for either a QR scan
-        // or a pairing code. Calling it too early or too late causes the
-        // "check your phone number" error.
-        sock.ev.on('connection.update', async (update) => {
-            const { connection, lastDisconnect, qr } = update;
-
-            if (qr && !codeRequested) {
-                codeRequested = true;
+        sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+            // This is the ONLY correct moment to call requestPairingCode
+            if (qr && !codeObtained) {
+                codeObtained = true;
+                clearTimeout(noQRTimer);
+                const clean = phoneNumber.replace(/\D/g, '');
+                console.log(`[wibc.ai] QR recibido, pidiendo código para ${clean}`);
                 try {
-                    const clean = phoneNumber.replace(/\D/g, '');
-                    console.log(`[wibc.ai] Solicitando código de emparejamiento para ${clean}`);
                     const code = await sock.requestPairingCode(clean);
-                    console.log(`[wibc.ai] Código obtenido para ${key}`);
+                    console.log(`[wibc.ai] ✅ Código obtenido ${kk}: ${code}`);
                     resolve(code);
                 } catch (err) {
-                    console.error(`[wibc.ai] Error requestPairingCode ${key}:`, err.message);
-                    clearTimeout(sessionTimeout);
-                    connStatus[key] = 'disconnected';
-                    terminateSession(key);
-                    userSessions[userId]?.delete(sessionId);
+                    console.error(`[wibc.ai] ❌ requestPairingCode falló ${kk}:`, err.message);
+                    clearTimeout(aliveTimer);
+                    statuses[kk] = 'disconnected';
+                    killSocket(kk);
+                    userSets[userId]?.delete(sessionId);
                     reject(err);
                 }
             }
 
             if (connection === 'close') {
-                clearTimeout(sessionTimeout);
-                const statusCode = (lastDisconnect?.error instanceof Boom)
-                    ? lastDisconnect.error.output?.statusCode
-                    : lastDisconnect.error?.statusCode;
+                clearTimeout(aliveTimer);
+                clearTimeout(noQRTimer);
+                delete qrMap[kk];
+                const code = lastDisconnect?.error instanceof Boom
+                    ? lastDisconnect.error.output.statusCode
+                    : lastDisconnect?.error?.statusCode;
 
-                delete qrCodes[key];
+                console.log(`[wibc.ai] Pairing conexión cerrada ${kk} | código: ${code}`);
 
-                if (wasConnected[key]) {
-                    connStatus[key] = 'disconnected';
-                    setTimeout(() => startBaileys(userId, sessionId), 5000);
+                if (everConn[kk]) {
+                    statuses[kk] = 'disconnected';
+                    setTimeout(() => connectQR(userId, sessionId), 5_000);
                 } else {
-                    connStatus[key] = 'disconnected';
-                    if (statusCode === DisconnectReason.loggedOut && fs.existsSync(folder)) {
+                    statuses[kk] = 'disconnected';
+                    if (code === DisconnectReason.loggedOut && fs.existsSync(folder)) {
                         fs.rmSync(folder, { recursive: true, force: true });
                     }
-                    userSessions[userId]?.delete(sessionId);
-                    if (!codeRequested) reject(new Error('Conexión cerrada antes de obtener código'));
+                    userSets[userId]?.delete(sessionId);
+                    if (!codeObtained) reject(new Error('Conexión cerrada antes de obtener código'));
                 }
-            } else if (connection === 'open') {
-                clearTimeout(sessionTimeout);
-                wasConnected[key] = true;
-                connStatus[key] = 'connected';
-                delete qrCodes[key];
 
-                const me = sock.authState?.creds?.me;
-                const rawPhone = me?.id ? me.id.split(':')[0].split('@')[0] : null;
-                deviceInfo[key] = {
-                    phone: rawPhone || phoneNumber,
-                    name: me?.name || null,
-                    connectedAt: new Date().toISOString(),
-                };
-                console.log(`[wibc.ai] Conectado por código ${key} (${deviceInfo[key].phone})`);
+            } else if (connection === 'open') {
+                clearTimeout(aliveTimer);
+                clearTimeout(noQRTimer);
+                everConn[kk] = true;
+                statuses[kk] = 'connected';
+                delete qrMap[kk];
+                const me    = sock.authState?.creds?.me;
+                const phone = me?.id?.split(':')[0]?.split('@')[0] ?? phoneNumber;
+                deviceMap[kk] = { phone, name: me?.name ?? null, connectedAt: new Date().toISOString() };
+                console.log(`[wibc.ai] ✅ Conectado pairing ${kk} (${phone})`);
             }
         });
-
-        // Safety net: if QR event never fires within 30s, abort
-        setTimeout(() => {
-            if (!codeRequested) {
-                clearTimeout(sessionTimeout);
-                terminateSession(key);
-                userSessions[userId]?.delete(sessionId);
-                reject(new Error('Sin respuesta de WhatsApp. Intenta de nuevo.'));
-            }
-        }, 30000);
     });
 };
 
+// ── Disconnect ─────────────────────────────────────────────────────────────
 const disconnectSession = (userId, sessionId) => {
-    const key = makeKey(userId, sessionId);
-    const folder = authFolder(userId, sessionId);
-    terminateSession(key);
-    connStatus[key] = 'disconnected';
-    wasConnected[key] = false;
-    delete deviceInfo[key];
+    const kk     = makeKey(userId, sessionId);
+    const folder = authDir(userId, sessionId);
+    killSocket(kk);
+    statuses[kk] = 'disconnected';
+    everConn[kk] = false;
+    delete deviceMap[kk];
     if (fs.existsSync(folder)) fs.rmSync(folder, { recursive: true, force: true });
-    userSessions[userId]?.delete(sessionId);
+    userSets[userId]?.delete(sessionId);
+    console.log(`[wibc.ai] Desconectado ${kk}`);
 };
 
-// HTTP handlers
+// ── HTTP Handlers ──────────────────────────────────────────────────────────
 const getQRHandler = (req, res) => {
-    const { userId, sessionId } = req.params;
-    const key = makeKey(userId, sessionId);
-    const status = connStatus[key];
-
-    if (status === 'connected')  return res.json({ qr: null, connected: true,  status: 'connected' });
-    if (status === 'timeout')    return res.json({ qr: null, connected: false, status: 'timeout' });
-    if (qrCodes[key])            return res.json({ qr: qrCodes[key], connected: false, status: 'qr_ready' });
-    res.json({ qr: null, connected: false, status: status || 'idle' });
+    const kk = makeKey(req.params.userId, req.params.sessionId);
+    if (statuses[kk] === 'connected') return res.json({ connected: true,  status: 'connected',  qr: null });
+    if (statuses[kk] === 'timeout')   return res.json({ connected: false, status: 'timeout',    qr: null });
+    if (qrMap[kk])                    return res.json({ connected: false, status: 'qr_ready',   qr: qrMap[kk] });
+    res.json({ connected: false, status: statuses[kk] || 'idle', qr: null });
 };
 
 const getDevicesHandler = (req, res) => {
     const { userId } = req.params;
-    const ids = [...(userSessions[userId] || [])];
-    const list = ids.map(sessionId => {
-        const key = makeKey(userId, sessionId);
-        return {
-            sessionId,
-            status: connStatus[key] || 'disconnected',
-            device: deviceInfo[key] || null,
-        };
+    const list = [...(userSets[userId] || [])].map(sessionId => {
+        const kk = makeKey(userId, sessionId);
+        return { sessionId, status: statuses[kk] || 'disconnected', device: deviceMap[kk] || null };
     });
     res.json({ sessions: list });
 };
 
 const initSessionHandler = (req, res) => {
-    const { userId, sessionId: reqSessionId } = req.body;
-    const sessionId = reqSessionId || Date.now().toString(36);
-    const key = makeKey(userId, sessionId);
-
-    if (!sessions[key] || connStatus[key] === 'disconnected' || connStatus[key] === 'timeout') {
-        startBaileys(userId, sessionId);
+    const { userId, sessionId: sid } = req.body;
+    const sessionId = sid || Date.now().toString(36);
+    const kk = makeKey(userId, sessionId);
+    if (!sockets[kk] || statuses[kk] === 'disconnected' || statuses[kk] === 'timeout') {
+        connectQR(userId, sessionId);
     }
     res.json({ success: true, sessionId });
 };
 
 module.exports = {
-    startBaileys,
-    startBaileysWithPairingCode,
+    startBaileys:              connectQR,
+    startBaileysWithPairingCode: connectPairing,
     disconnectSession,
     getQRHandler,
     getDevicesHandler,
     initSessionHandler,
-    userSessions,
+    userSessions: userSets,
 };
