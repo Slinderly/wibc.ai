@@ -4,39 +4,41 @@ const pino = require('pino');
 const path = require('path');
 const fs = require('fs');
 
-const sessions = {};
-const qrCodes = {};
-const connectionStatus = {};
-const deviceInfo = {};   // { phone, connectedAt, name }
-const wasConnected = {}; // whether this session ever reached 'open'
-
 const { generateAIResponse } = require('./ai');
 
-// Terminate a session cleanly
-const terminateSession = (userId) => {
-    try {
-        if (sessions[userId]) {
-            sessions[userId].end();
-        }
-    } catch (_) {}
-    delete sessions[userId];
-    delete qrCodes[userId];
-    connectionStatus[userId] = 'disconnected';
+// State maps – keyed by sessionKey = `${userId}:${sessionId}`
+const sessions       = {};
+const qrCodes        = {};
+const connStatus     = {};  // 'connecting' | 'connected' | 'disconnected' | 'timeout'
+const deviceInfo     = {};  // { phone, name, connectedAt }
+const wasConnected   = {};
+const userSessions   = {};  // userId -> Set of sessionIds
+
+const makeKey = (userId, sessionId) => `${userId}:${sessionId}`;
+
+const authFolder = (userId, sessionId) =>
+    path.join(__dirname, `../data/auth_${userId}_${sessionId}`);
+
+// Terminate socket cleanly
+const terminateSession = (key) => {
+    try { if (sessions[key]) sessions[key].end(); } catch (_) {}
+    delete sessions[key];
+    delete qrCodes[key];
 };
 
-const createSocket = async (userId) => {
-    const authFolder = path.join(__dirname, `../data/auth_${userId}`);
+const createSocket = async (userId, sessionId) => {
+    const folder = authFolder(userId, sessionId);
 
-    if (fs.existsSync(authFolder) && !fs.existsSync(path.join(authFolder, 'creds.json'))) {
-        fs.rmSync(authFolder, { recursive: true, force: true });
+    if (fs.existsSync(folder) && !fs.existsSync(path.join(folder, 'creds.json'))) {
+        fs.rmSync(folder, { recursive: true, force: true });
     }
-    if (!fs.existsSync(authFolder)) {
-        fs.mkdirSync(authFolder, { recursive: true });
-    }
+    if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
 
-    const { state, saveCreds } = await useMultiFileAuthState(authFolder);
-    connectionStatus[userId] = 'connecting';
+    const { state, saveCreds } = await useMultiFileAuthState(folder);
     const { version } = await fetchLatestBaileysVersion();
+    const key = makeKey(userId, sessionId);
+
+    connStatus[key] = 'connecting';
 
     const sock = makeWASocket({
         auth: state,
@@ -49,41 +51,41 @@ const createSocket = async (userId) => {
         defaultQueryTimeoutMs: 0,
     });
 
-    sessions[userId] = sock;
+    sessions[key] = sock;
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('messages.upsert', async (m) => {
         const msg = m.messages[0];
         if (!msg || !msg.message || msg.key.fromMe) return;
-
-        const messageText = msg.message.conversation ||
-                            msg.message.extendedTextMessage?.text || '';
-        if (messageText) {
-            const reply = await generateAIResponse(userId, messageText);
-            if (reply) {
-                await sock.sendMessage(msg.key.remoteJid, { text: reply });
-            }
+        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+        if (text) {
+            const reply = await generateAIResponse(userId, text);
+            if (reply) await sock.sendMessage(msg.key.remoteJid, { text: reply });
         }
     });
 
-    return { sock, state };
+    return sock;
 };
 
-const startBaileys = async (userId) => {
-    const authFolder = path.join(__dirname, `../data/auth_${userId}`);
-    const isNewSession = !fs.existsSync(path.join(authFolder, 'creds.json'));
+const startBaileys = async (userId, sessionId) => {
+    const key = makeKey(userId, sessionId);
+    const folder = authFolder(userId, sessionId);
+    const isNew = !fs.existsSync(path.join(folder, 'creds.json'));
     let qrTimeout = null;
 
-    const { sock } = await createSocket(userId);
+    // Track session for this user
+    if (!userSessions[userId]) userSessions[userId] = new Set();
+    userSessions[userId].add(sessionId);
 
-    // For brand-new sessions (no saved creds), stop after 30s if not connected
-    if (isNewSession) {
+    const sock = await createSocket(userId, sessionId);
+
+    if (isNew) {
         qrTimeout = setTimeout(() => {
-            if (connectionStatus[userId] !== 'connected') {
-                console.log(`[wibc.ai] Timeout de 30s para ${userId}. Terminando sesión sin conexión.`);
-                connectionStatus[userId] = 'timeout';
-                delete qrCodes[userId];
-                terminateSession(userId);
+            if (connStatus[key] !== 'connected') {
+                console.log(`[wibc.ai] Timeout QR ${key}`);
+                connStatus[key] = 'timeout';
+                delete qrCodes[key];
+                terminateSession(key);
             }
         }, 30000);
     }
@@ -92,67 +94,67 @@ const startBaileys = async (userId) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            console.log(`[wibc.ai] QR generado para ${userId}`);
-            qrCodes[userId] = qr;
+            qrCodes[key] = qr;
         }
 
         if (connection === 'close') {
             clearTimeout(qrTimeout);
-            const statusCode = (lastDisconnect?.error instanceof Boom)
+            const code = (lastDisconnect?.error instanceof Boom)
                 ? lastDisconnect.error.output?.statusCode
                 : lastDisconnect.error?.statusCode;
 
-            connectionStatus[userId] = 'disconnected';
-            delete qrCodes[userId];
+            delete qrCodes[key];
 
-            if (statusCode === DisconnectReason.loggedOut) {
-                console.log(`[wibc.ai] Sesión cerrada (loggedOut). Borrando auth_${userId}...`);
-                wasConnected[userId] = false;
-                delete deviceInfo[userId];
-                if (fs.existsSync(authFolder)) {
-                    fs.rmSync(authFolder, { recursive: true, force: true });
-                }
-            } else if (wasConnected[userId]) {
-                // Solo reintentar si alguna vez estuvo conectado (sesión guardada)
-                console.log(`[wibc.ai] Reconectando ${userId} en 5s...`);
-                setTimeout(() => startBaileys(userId), 5000);
+            if (code === DisconnectReason.loggedOut) {
+                console.log(`[wibc.ai] LoggedOut ${key}`);
+                connStatus[key] = 'disconnected';
+                wasConnected[key] = false;
+                delete deviceInfo[key];
+                if (fs.existsSync(folder)) fs.rmSync(folder, { recursive: true, force: true });
+                userSessions[userId]?.delete(sessionId);
+            } else if (wasConnected[key]) {
+                connStatus[key] = 'disconnected';
+                console.log(`[wibc.ai] Reconectando ${key} en 5s...`);
+                setTimeout(() => startBaileys(userId, sessionId), 5000);
             } else {
-                console.log(`[wibc.ai] Sesión ${userId} cerrada sin haber conectado. No se reintenta.`);
+                connStatus[key] = 'disconnected';
+                console.log(`[wibc.ai] ${key} cerrado sin conectar. No se reintenta.`);
             }
+
         } else if (connection === 'open') {
             clearTimeout(qrTimeout);
-            wasConnected[userId] = true;
-            connectionStatus[userId] = 'connected';
-            delete qrCodes[userId];
+            wasConnected[key] = true;
+            connStatus[key] = 'connected';
+            delete qrCodes[key];
 
-            // Guardar info del dispositivo conectado
             const me = sock.authState?.creds?.me;
             const rawPhone = me?.id ? me.id.split(':')[0].split('@')[0] : null;
-            deviceInfo[userId] = {
+            deviceInfo[key] = {
                 phone: rawPhone || 'Desconocido',
                 name: me?.name || null,
                 connectedAt: new Date().toISOString(),
             };
-            console.log(`[wibc.ai] Conectado para ${userId} (${deviceInfo[userId].phone})`);
+            console.log(`[wibc.ai] Conectado ${key} (${deviceInfo[key].phone})`);
         }
     });
 };
 
-const startBaileysWithPairingCode = async (userId, phoneNumber) => {
-    const authFolder = path.join(__dirname, `../data/auth_${userId}`);
+const startBaileysWithPairingCode = async (userId, sessionId, phoneNumber) => {
+    const key = makeKey(userId, sessionId);
+    const folder = authFolder(userId, sessionId);
 
-    if (fs.existsSync(authFolder)) {
-        fs.rmSync(authFolder, { recursive: true, force: true });
-    }
+    if (fs.existsSync(folder)) fs.rmSync(folder, { recursive: true, force: true });
 
-    const { sock } = await createSocket(userId);
+    if (!userSessions[userId]) userSessions[userId] = new Set();
+    userSessions[userId].add(sessionId);
 
-    // 30s timeout for pairing code flow too
+    const sock = await createSocket(userId, sessionId);
+
     const qrTimeout = setTimeout(() => {
-        if (connectionStatus[userId] !== 'connected') {
-            console.log(`[wibc.ai] Timeout de 30s (pairing) para ${userId}.`);
-            connectionStatus[userId] = 'timeout';
-            terminateSession(userId);
+        if (connStatus[key] !== 'connected') {
+            connStatus[key] = 'timeout';
+            delete qrCodes[key];
+            terminateSession(key);
         }
     }, 30000);
 
@@ -161,46 +163,46 @@ const startBaileysWithPairingCode = async (userId, phoneNumber) => {
 
         if (connection === 'close') {
             clearTimeout(qrTimeout);
-            connectionStatus[userId] = 'disconnected';
+            const code = (lastDisconnect?.error instanceof Boom)
+                ? lastDisconnect.error.output?.statusCode
+                : lastDisconnect.error?.statusCode;
 
-            if (wasConnected[userId]) {
-                setTimeout(() => startBaileys(userId), 5000);
+            delete qrCodes[key];
+
+            if (wasConnected[key]) {
+                connStatus[key] = 'disconnected';
+                setTimeout(() => startBaileys(userId, sessionId), 5000);
             } else {
-                const statusCode = (lastDisconnect?.error instanceof Boom)
-                    ? lastDisconnect.error.output?.statusCode
-                    : lastDisconnect.error?.statusCode;
-                if (statusCode === DisconnectReason.loggedOut && fs.existsSync(authFolder)) {
-                    fs.rmSync(authFolder, { recursive: true, force: true });
+                connStatus[key] = 'disconnected';
+                if (code === DisconnectReason.loggedOut && fs.existsSync(folder)) {
+                    fs.rmSync(folder, { recursive: true, force: true });
                 }
+                userSessions[userId]?.delete(sessionId);
             }
         } else if (connection === 'open') {
             clearTimeout(qrTimeout);
-            wasConnected[userId] = true;
-            connectionStatus[userId] = 'connected';
+            wasConnected[key] = true;
+            connStatus[key] = 'connected';
+            delete qrCodes[key];
 
             const me = sock.authState?.creds?.me;
             const rawPhone = me?.id ? me.id.split(':')[0].split('@')[0] : null;
-            deviceInfo[userId] = {
+            deviceInfo[key] = {
                 phone: rawPhone || phoneNumber,
                 name: me?.name || null,
                 connectedAt: new Date().toISOString(),
             };
-            console.log(`[wibc.ai] Conectado por código para ${userId} (${deviceInfo[userId].phone})`);
+            console.log(`[wibc.ai] Conectado por código ${key} (${deviceInfo[key].phone})`);
         }
     });
 
     return new Promise((resolve, reject) => {
-        const codeTimeout = setTimeout(() => {
-            reject(new Error('Timeout solicitando código'));
-        }, 15000);
-
+        const codeTimeout = setTimeout(() => reject(new Error('Timeout código')), 15000);
         setTimeout(async () => {
             try {
-                const cleanPhone = phoneNumber.replace(/\D/g, '');
-                console.log(`[wibc.ai] Solicitando código para ${cleanPhone}`);
-                const code = await sock.requestPairingCode(cleanPhone);
+                const clean = phoneNumber.replace(/\D/g, '');
+                const code = await sock.requestPairingCode(clean);
                 clearTimeout(codeTimeout);
-                console.log(`[wibc.ai] Código generado: ${code}`);
                 resolve(code);
             } catch (err) {
                 clearTimeout(codeTimeout);
@@ -210,39 +212,60 @@ const startBaileysWithPairingCode = async (userId, phoneNumber) => {
     });
 };
 
-const getQR = (req, res) => {
-    const { userId } = req.params;
-    const status = connectionStatus[userId];
+const disconnectSession = (userId, sessionId) => {
+    const key = makeKey(userId, sessionId);
+    const folder = authFolder(userId, sessionId);
+    terminateSession(key);
+    connStatus[key] = 'disconnected';
+    wasConnected[key] = false;
+    delete deviceInfo[key];
+    if (fs.existsSync(folder)) fs.rmSync(folder, { recursive: true, force: true });
+    userSessions[userId]?.delete(sessionId);
+};
 
-    if (status === 'connected') {
-        return res.json({ qr: null, connected: true, status: 'connected' });
-    }
-    if (status === 'timeout') {
-        return res.json({ qr: null, connected: false, status: 'timeout' });
-    }
-    if (qrCodes[userId]) {
-        return res.json({ qr: qrCodes[userId], connected: false, status: 'qr_ready' });
-    }
+// HTTP handlers
+const getQRHandler = (req, res) => {
+    const { userId, sessionId } = req.params;
+    const key = makeKey(userId, sessionId);
+    const status = connStatus[key];
+
+    if (status === 'connected')  return res.json({ qr: null, connected: true,  status: 'connected' });
+    if (status === 'timeout')    return res.json({ qr: null, connected: false, status: 'timeout' });
+    if (qrCodes[key])            return res.json({ qr: qrCodes[key], connected: false, status: 'qr_ready' });
     res.json({ qr: null, connected: false, status: status || 'idle' });
 };
 
-const getDevices = (req, res) => {
+const getDevicesHandler = (req, res) => {
     const { userId } = req.params;
-    const status = connectionStatus[userId] || 'disconnected';
-    const info = deviceInfo[userId] || null;
-
-    res.json({
-        status,
-        device: info
+    const ids = [...(userSessions[userId] || [])];
+    const list = ids.map(sessionId => {
+        const key = makeKey(userId, sessionId);
+        return {
+            sessionId,
+            status: connStatus[key] || 'disconnected',
+            device: deviceInfo[key] || null,
+        };
     });
+    res.json({ sessions: list });
 };
 
-const initSession = (req, res) => {
-    const { userId } = req.body;
-    if (!sessions[userId] || connectionStatus[userId] === 'disconnected' || connectionStatus[userId] === 'timeout') {
-        startBaileys(userId);
+const initSessionHandler = (req, res) => {
+    const { userId, sessionId: reqSessionId } = req.body;
+    const sessionId = reqSessionId || Date.now().toString(36);
+    const key = makeKey(userId, sessionId);
+
+    if (!sessions[key] || connStatus[key] === 'disconnected' || connStatus[key] === 'timeout') {
+        startBaileys(userId, sessionId);
     }
-    res.json({ success: true });
+    res.json({ success: true, sessionId });
 };
 
-module.exports = { startBaileys, startBaileysWithPairingCode, getQR, getDevices, initSession };
+module.exports = {
+    startBaileys,
+    startBaileysWithPairingCode,
+    disconnectSession,
+    getQRHandler,
+    getDevicesHandler,
+    initSessionHandler,
+    userSessions,
+};

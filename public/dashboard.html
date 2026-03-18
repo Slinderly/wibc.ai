@@ -6,6 +6,7 @@
     <title>wibc.ai - Dashboard</title>
     <link rel="stylesheet" href="/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
 </head>
 <body class="dashboard-bg">
@@ -14,10 +15,18 @@
     <nav class="sidebar glassmorphism">
         <h1 class="logo">wibc<span class="highlight">.ai</span></h1>
         <ul class="nav-links">
-            <li class="active" data-view="products">Productos</li>
-            <li data-view="ai-config">Inteligencia Artificial</li>
-            <li data-view="manual-bot">Automatización</li>
-            <li data-view="whatsapp">WhatsApp</li>
+            <li class="active" data-view="products">
+                <i data-lucide="shopping-bag"></i><span>Productos</span>
+            </li>
+            <li data-view="ai-config">
+                <i data-lucide="brain"></i><span>Inteligencia Artificial</span>
+            </li>
+            <li data-view="manual-bot">
+                <i data-lucide="zap"></i><span>Automatización</span>
+            </li>
+            <li data-view="whatsapp">
+                <i data-lucide="smartphone"></i><span>WhatsApp</span>
+            </li>
         </ul>
         <button id="logoutBtn" class="btn-outline">Cerrar Sesión</button>
     </nav>
@@ -90,18 +99,30 @@
 
         <!-- WhatsApp View -->
         <section id="view-whatsapp" class="view-section">
-            <h2>Conexión a WhatsApp</h2>
+            <h2>WhatsApp</h2>
 
-            <!-- Device list -->
-            <div class="card glassmorphism" id="deviceCard">
-                <h3 style="margin-bottom:14px;font-size:1rem;font-weight:600;">Dispositivo vinculado</h3>
-                <div id="deviceInfo">
-                    <p style="color:var(--text-muted);font-size:0.9rem;">Sin conexión activa.</p>
+            <!-- Devices list -->
+            <div class="card glassmorphism" id="devicesCard">
+                <div class="section-header">
+                    <h3>Dispositivos vinculados</h3>
+                    <button id="addDeviceBtn" class="btn-icon-label">
+                        <i data-lucide="plus-circle"></i> Agregar
+                    </button>
+                </div>
+                <div id="devicesList">
+                    <p style="color:var(--text-muted);font-size:0.9rem;padding:8px 0;">Sin dispositivos conectados.</p>
                 </div>
             </div>
 
-            <!-- Connection methods -->
-            <div class="card glassmorphism" id="connectCard">
+            <!-- Add device panel (hidden by default) -->
+            <div class="card glassmorphism" id="addDeviceCard" style="display:none;">
+                <div class="section-header">
+                    <h3>Vincular nuevo dispositivo</h3>
+                    <button id="closeAddDevice" class="btn-icon" title="Cerrar">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
                 <div class="connect-tabs">
                     <button class="connect-tab active" data-panel="qr-panel">Código QR</button>
                     <button class="connect-tab" data-panel="phone-panel">Número de Celular</button>
@@ -110,7 +131,7 @@
                 <!-- QR Panel -->
                 <div id="qr-panel" class="connect-panel active">
                     <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:14px;">
-                        Abre WhatsApp > Dispositivos vinculados > Vincular dispositivo y escanea el código.
+                        Abre WhatsApp &rsaquo; Dispositivos vinculados &rsaquo; Vincular dispositivo.
                     </p>
                     <button id="startBotBtn" class="btn-primary" style="margin-bottom:16px;">Generar Código QR</button>
 
@@ -119,7 +140,7 @@
                             <div id="qrcode"></div>
                         </div>
                         <p id="qrStatus"></p>
-                        <div id="qrTimer" class="timer-bar-wrap" style="display:none;">
+                        <div class="timer-bar-wrap" id="qrTimer" style="display:none;">
                             <div class="timer-bar" id="timerBar"></div>
                             <span class="timer-label" id="timerLabel">30s</span>
                         </div>
@@ -134,7 +155,7 @@
                 <!-- Phone Panel -->
                 <div id="phone-panel" class="connect-panel">
                     <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:16px;">
-                        Ingresa tu número con código de país (sin + ni espacios). Recibirás un código de 8 dígitos.
+                        Ingresa tu número con código de país (ej: 59171234567). Recibirás un código de 8 dígitos.
                     </p>
                     <div class="phone-input-row">
                         <div class="input-group">
@@ -150,21 +171,15 @@
                         <p>Ingresa este código en WhatsApp:</p>
                         <div class="pairing-code" id="pairingCode">---- ----</div>
                         <div class="instructions">
-                            WhatsApp > <strong>Dispositivos vinculados</strong> > <strong>Vincular dispositivo</strong> > <strong>Vincular con número de teléfono</strong>
+                            WhatsApp &rsaquo; <strong>Dispositivos vinculados</strong> &rsaquo; <strong>Vincular con número de teléfono</strong>
                         </div>
                         <p id="phoneTimer" style="color:var(--text-muted);font-size:0.8rem;margin-top:8px;"></p>
                     </div>
 
                     <div id="phoneTimeoutMsg" style="display:none;text-align:center;padding:12px 0;">
-                        <p style="color:var(--text-muted);margin-bottom:12px;">Tiempo agotado. El código expiró.</p>
+                        <p style="color:var(--text-muted);margin-bottom:12px;">El código expiró.</p>
                         <button id="retryPhoneBtn" class="btn-secondary">Intentar de nuevo</button>
                     </div>
-                </div>
-
-                <!-- Connected state (shared) -->
-                <div id="connectedBadge" class="connected-badge" style="display:none;">
-                    <div class="check-icon">&#10003;</div>
-                    <p>WhatsApp conectado correctamente</p>
                 </div>
             </div>
         </section>
@@ -173,14 +188,25 @@
 
     <!-- Mobile Bottom Navigation -->
     <nav class="bottom-nav">
-        <button class="bottom-nav-item active" data-view="products">Productos</button>
-        <button class="bottom-nav-item" data-view="ai-config">IA</button>
-        <button class="bottom-nav-item" data-view="manual-bot">Reglas</button>
-        <button class="bottom-nav-item" data-view="whatsapp">WhatsApp</button>
+        <button class="bottom-nav-item active" data-view="products">
+            <i data-lucide="shopping-bag"></i>
+            <span>Productos</span>
+        </button>
+        <button class="bottom-nav-item" data-view="ai-config">
+            <i data-lucide="brain"></i>
+            <span>IA</span>
+        </button>
+        <button class="bottom-nav-item" data-view="manual-bot">
+            <i data-lucide="zap"></i>
+            <span>Reglas</span>
+        </button>
+        <button class="bottom-nav-item" data-view="whatsapp">
+            <i data-lucide="smartphone"></i>
+            <span>WhatsApp</span>
+        </button>
     </nav>
 
     <div class="toast" id="toast"></div>
-
     <script src="/js/dashboard.js"></script>
 </body>
 </html>

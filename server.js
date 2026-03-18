@@ -1,8 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs'); // Añadido para leer las carpetas de sesiones
+const fs = require('fs');
 const routes = require('./src/routes');
+const adminRoutes = require('./src/admin-routes');
 const { startBaileys } = require('./src/whatsapp');
 
 const app = express();
@@ -10,42 +11,32 @@ const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-// Archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API Rutas
 app.use('/api', routes);
+app.use('/admin-api', adminRoutes);
 
-// Rutas de las vistas
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/index.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/dashboard.html'));
-});
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public/dashboard.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
 
 app.listen(PORT, HOST, () => {
-    console.log(`[wibc.ai] 🚀 Servidor corriendo en http://${HOST}:${PORT}`);
+    console.log(`[wibc.ai] Servidor en http://${HOST}:${PORT}`);
 
-    // --- LÓGICA DE AUTO-RECONEXIÓN ---
-    // Buscar todas las sesiones guardadas en la carpeta 'data' y reconectarlas
+    // Auto-reconnect saved sessions (format: auth_${userId}_${sessionId})
     const dataPath = path.join(__dirname, 'data');
-    
-    if (fs.existsSync(dataPath)) {
-        const folders = fs.readdirSync(dataPath);
-        
-        folders.forEach(folder => {
-            if (folder.startsWith('auth_')) {
-                const userId = folder.replace('auth_', '');
-                console.log(`[wibc.ai] 🔄 Levantando sesión guardada para el usuario: ${userId}`);
-                startBaileys(userId); // Reconecta el socket automáticamente
-            }
-        });
-    } else {
-        console.log(`[wibc.ai] No hay sesiones previas guardadas.`);
-    }
+    if (!fs.existsSync(dataPath)) return;
+
+    fs.readdirSync(dataPath).forEach(folder => {
+        if (!folder.startsWith('auth_')) return;
+        const inner = folder.slice(5); // remove 'auth_'
+        const sep = inner.indexOf('_');
+        if (sep === -1) return; // skip old format
+        const userId    = inner.slice(0, sep);
+        const sessionId = inner.slice(sep + 1);
+        console.log(`[wibc.ai] Reconectando sesion ${userId}:${sessionId}`);
+        startBaileys(userId, sessionId);
+    });
 });

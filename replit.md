@@ -1,13 +1,14 @@
 # wibc.ai - WhatsApp AI Bot Platform
 
 ## Overview
-A Node.js/Express web platform that lets users connect their WhatsApp accounts and configure an AI-powered sales bot. Users log in, link WhatsApp (via QR code or phone number pairing code), then configure their bot with products, AI prompts, and response rules.
+A Node.js/Express web platform that lets users connect multiple WhatsApp accounts and configure an AI-powered sales bot. Users log in, link WhatsApp devices (QR or pairing code), configure bot with products, AI prompts, and keyword rules. Hidden admin panel at `/admin`.
 
 ## Architecture
 - **Runtime**: Node.js (CommonJS)
 - **Framework**: Express.js (v5)
-- **Frontend**: Static HTML/CSS/JS served from `public/`
+- **Frontend**: Static HTML/CSS/JS served from `public/` (Lucide icons via CDN)
 - **Backend**: Express API in `src/`
+- **Admin panel**: `/admin` — password `ortizuwu20` (env: `ADMIN_PASSWORD`) — file manager + log viewer
 - **WhatsApp**: `@whiskeysockets/baileys` library for WhatsApp Web protocol
 - **AI**: Google Gemini (`@google/genai`) for AI responses
 

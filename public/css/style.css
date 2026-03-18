@@ -167,14 +167,48 @@ select option { background: #1e1535; color: var(--text); }
     cursor: pointer;
     transition: all 0.25s ease;
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     display: flex;
     align-items: center;
     gap: 10px;
     user-select: none;
 }
+.nav-links li svg { width: 16px; height: 16px; flex-shrink: 0; stroke-width: 2; }
 .nav-links li:hover { background: rgba(255,255,255,0.05); color: var(--text); }
 .nav-links li.active { background: var(--primary); color: white; font-weight: 600; }
+
+/* Section header with action button */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.section-header h3 { font-size: 0.95rem; font-weight: 600; }
+
+.btn-icon-label {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px;
+    background: rgba(157,78,221,0.15);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--primary);
+    font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; transition: background 0.2s;
+}
+.btn-icon-label svg { width: 14px; height: 14px; }
+.btn-icon-label:hover { background: rgba(157,78,221,0.25); }
+.btn-icon-label:disabled { opacity: 0.5; cursor: default; }
+
+.btn-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px;
+    background: transparent; border: none;
+    color: var(--text-muted); border-radius: 6px; cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.btn-icon svg { width: 16px; height: 16px; }
+.btn-icon:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 
 .content {
     flex-grow: 1;
@@ -224,6 +258,27 @@ h2 { margin-bottom: 20px; font-weight: 600; font-size: 1.3rem; }
 .prod-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .prod-header h3, .prod-header h4 { font-size: 0.95rem; font-weight: 600; }
 .prod-price { color: var(--primary); font-weight: 700; font-size: 1.1rem; white-space: nowrap; }
+
+/* ── Devices list ── */
+.device-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(157,78,221,0.12);
+}
+.device-row:last-child { border-bottom: none; }
+.device-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.device-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.device-dot.connecting { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: blink 1.2s infinite; }
+.device-dot.disconnected { background: #555; }
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+.device-phone { font-weight: 600; font-size: 0.9rem; }
+.device-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
 
 /* ── WhatsApp Connection ── */
 .text-center { text-align: center; }
@@ -397,6 +452,7 @@ h2 { margin-bottom: 20px; font-weight: 600; font-size: 1.3rem; }
         user-select: none;
     }
     .bottom-nav-item.active { color: var(--primary); font-weight: 600; }
+    .bottom-nav-item svg { width: 20px; height: 20px; stroke-width: 1.8; }
 
     /* Mobile top bar */
     .mobile-topbar {

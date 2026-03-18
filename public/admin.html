@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wibc.ai — Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+<!-- ── Login Screen ── -->
+<div id="loginScreen" class="login-screen">
+    <div class="login-box">
+        <div class="login-logo">wibc<span>.ai</span></div>
+        <p class="login-sub">Panel de Administración</p>
+        <form id="loginForm">
+            <label>Contraseña</label>
+            <input type="password" id="adminPass" placeholder="••••••••" autofocus>
+            <button type="submit" class="a-btn-primary">Ingresar</button>
+            <p id="loginError" class="a-error" style="display:none;"></p>
+        </form>
+    </div>
+</div>
+
+<!-- ── Admin Panel ── -->
+<div id="adminPanel" class="admin-panel" style="display:none;">
+
+    <!-- Topbar -->
+    <header class="admin-topbar">
+        <div class="topbar-left">
+            <span class="topbar-logo">wibc<span class="hl">.ai</span> <span class="topbar-badge">admin</span></span>
+        </div>
+        <div class="topbar-tabs">
+            <button class="topbar-tab active" data-tab="files">
+                <i data-lucide="folder-open"></i> Archivos
+            </button>
+            <button class="topbar-tab" data-tab="logs">
+                <i data-lucide="scroll-text"></i> Logs
+            </button>
+        </div>
+        <div class="topbar-right">
+            <button id="logoutAdminBtn" class="a-btn-ghost">
+                <i data-lucide="log-out"></i> Salir
+            </button>
+        </div>
+    </header>
+
+    <!-- Files Tab -->
+    <div id="tab-files" class="tab-content active">
+        <div class="files-layout">
+
+            <!-- Sidebar: file tree -->
+            <aside class="file-tree-panel">
+                <div class="tree-toolbar">
+                    <span class="tree-path" id="treePath">/</span>
+                    <div class="tree-actions">
+                        <button class="icon-btn" id="btnNewFile" title="Nuevo archivo"><i data-lucide="file-plus"></i></button>
+                        <button class="icon-btn" id="btnNewDir" title="Nueva carpeta"><i data-lucide="folder-plus"></i></button>
+                        <button class="icon-btn" id="btnRefresh" title="Actualizar"><i data-lucide="refresh-cw"></i></button>
+                    </div>
+                </div>
+                <div class="file-tree" id="fileTree">
+                    <div class="tree-loading">Cargando...</div>
+                </div>
+            </aside>
+
+            <!-- Editor panel -->
+            <section class="editor-panel">
+                <div class="editor-toolbar">
+                    <span class="editor-filename" id="editorFilename">— ningún archivo —</span>
+                    <div class="editor-actions">
+                        <button class="a-btn-primary" id="btnSave" disabled>
+                            <i data-lucide="save"></i> Guardar
+                        </button>
+                        <button class="a-btn-danger" id="btnDelete" disabled>
+                            <i data-lucide="trash-2"></i> Eliminar
+                        </button>
+                        <button class="a-btn-ghost" id="btnRename" disabled>
+                            <i data-lucide="pencil"></i> Renombrar
+                        </button>
+                    </div>
+                </div>
+                <div class="editor-body">
+                    <textarea id="codeEditor" class="code-editor" placeholder="Selecciona un archivo para editarlo..." spellcheck="false" disabled></textarea>
+                    <div id="editorPlaceholder" class="editor-placeholder">
+                        <i data-lucide="file-code-2" style="width:48px;height:48px;opacity:0.2;"></i>
+                        <p>Selecciona un archivo del árbol para empezar a editar</p>
+                    </div>
+                </div>
+                <div class="editor-statusbar">
+                    <span id="editorStatus"></span>
+                    <span id="editorSize"></span>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Logs Tab -->
+    <div id="tab-logs" class="tab-content">
+        <div class="logs-panel">
+            <div class="logs-toolbar">
+                <h3>Logs del servidor</h3>
+                <button class="a-btn-ghost" id="btnRefreshLogs">
+                    <i data-lucide="refresh-cw"></i> Actualizar
+                </button>
+            </div>
+            <div id="logsContainer" class="logs-container">
+                <p style="color:#666;">Cargando logs...</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Rename Modal -->
+<div id="renameModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <h3>Renombrar</h3>
+        <input type="text" id="renameInput" class="modal-input" placeholder="Nuevo nombre">
+        <div class="modal-actions">
+            <button class="a-btn-primary" id="renameConfirm">Confirmar</button>
+            <button class="a-btn-ghost" id="renameCancel">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div id="deleteModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <h3>Eliminar</h3>
+        <p id="deleteModalMsg" style="color:#aaa;margin-bottom:16px;font-size:0.9rem;"></p>
+        <div class="modal-actions">
+            <button class="a-btn-danger" id="deleteConfirm">Eliminar</button>
+            <button class="a-btn-ghost" id="deleteCancel">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script src="/js/admin.js"></script>
+</body>
+</html>

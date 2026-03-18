@@ -2,27 +2,29 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { getQR, getDevices, initSession, startBaileysWithPairingCode } = require('./whatsapp');
+const {
+    getQRHandler, getDevicesHandler, initSessionHandler,
+    startBaileysWithPairingCode, disconnectSession
+} = require('./whatsapp');
 
-const dataDir = path.join(__dirname, '../data');
-const usersFile = path.join(dataDir, 'users.json');
+const dataDir    = path.join(__dirname, '../data');
+const usersFile  = path.join(dataDir, 'users.json');
 const userDataDir = path.join(dataDir, 'user_data');
 
 const ensureDataFiles = () => {
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    if (!fs.existsSync(dataDir))     fs.mkdirSync(dataDir, { recursive: true });
     if (!fs.existsSync(userDataDir)) fs.mkdirSync(userDataDir, { recursive: true });
-    if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, JSON.stringify([]));
+    if (!fs.existsSync(usersFile))   fs.writeFileSync(usersFile, JSON.stringify([]));
 };
 ensureDataFiles();
 
+// ── Auth ──
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ success: false, message: 'Faltan credenciales' });
-    }
+    if (!username || !password) return res.status(400).json({ success: false, message: 'Faltan credenciales' });
 
     let users = JSON.parse(fs.readFileSync(usersFile));
-    let user = users.find(u => u.username === username);
+    let user  = users.find(u => u.username === username);
 
     if (user) {
         if (user.password === password) return res.json({ success: true, userId: user.id });
@@ -33,51 +35,51 @@ router.post('/login', (req, res) => {
     users.push({ id: newUserId, username, password });
     fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 
-    const userDataPath = path.join(userDataDir, `${newUserId}.json`);
-    fs.writeFileSync(userDataPath, JSON.stringify({
-        botMode: 'ai',
-        manualRules: [],
+    fs.writeFileSync(path.join(userDataDir, `${newUserId}.json`), JSON.stringify({
+        botMode: 'ai', manualRules: [],
         aiConfig: { apiKey: '', prompt: 'Eres un vendedor virtual.', context: '' },
         products: []
     }, null, 2));
 
-    res.json({ success: true, userId: newUserId, message: 'Usuario creado y logueado' });
+    res.json({ success: true, userId: newUserId });
 });
 
+// ── User Data ──
 router.get('/data/:userId', (req, res) => {
-    const userDataPath = path.join(userDataDir, `${req.params.userId}.json`);
-    if (fs.existsSync(userDataPath)) {
-        res.json(JSON.parse(fs.readFileSync(userDataPath)));
-    } else {
-        res.status(404).json({ error: 'Datos no encontrados' });
-    }
+    const f = path.join(userDataDir, `${req.params.userId}.json`);
+    if (fs.existsSync(f)) res.json(JSON.parse(fs.readFileSync(f)));
+    else res.status(404).json({ error: 'Datos no encontrados' });
 });
 
 router.post('/data/:userId', (req, res) => {
-    const userDataPath = path.join(userDataDir, `${req.params.userId}.json`);
     try {
-        fs.writeFileSync(userDataPath, JSON.stringify(req.body, null, 2));
+        fs.writeFileSync(path.join(userDataDir, `${req.params.userId}.json`), JSON.stringify(req.body, null, 2));
         res.json({ success: true });
-    } catch {
-        res.status(500).json({ success: false, message: 'Error al guardar' });
-    }
+    } catch { res.status(500).json({ success: false }); }
 });
 
-router.get('/qr/:userId', getQR);
-router.get('/devices/:userId', getDevices);
-router.post('/init-bot', initSession);
+// ── WhatsApp ──
+router.get('/qr/:userId/:sessionId', getQRHandler);
+router.get('/devices/:userId', getDevicesHandler);
+router.post('/init-bot', initSessionHandler);
+
+router.delete('/devices/:userId/:sessionId', (req, res) => {
+    const { userId, sessionId } = req.params;
+    disconnectSession(userId, sessionId);
+    res.json({ success: true });
+});
 
 router.post('/request-pairing-code', async (req, res) => {
-    const { userId, phoneNumber } = req.body;
-    if (!userId || !phoneNumber) {
-        return res.status(400).json({ success: false, message: 'Faltan userId o phoneNumber' });
-    }
+    const { userId, sessionId: reqSessionId, phoneNumber } = req.body;
+    if (!userId || !phoneNumber) return res.status(400).json({ success: false, message: 'Faltan datos' });
+
+    const sessionId = reqSessionId || Date.now().toString(36);
     try {
-        const code = await startBaileysWithPairingCode(userId, phoneNumber);
-        res.json({ success: true, code });
+        const code = await startBaileysWithPairingCode(userId, sessionId, phoneNumber);
+        res.json({ success: true, code, sessionId });
     } catch (err) {
-        console.error('[wibc.ai] Error código emparejamiento:', err);
-        res.status(500).json({ success: false, message: 'No se pudo generar el código. Verifica el número.' });
+        console.error('[wibc.ai] Error código:', err);
+        res.status(500).json({ success: false, message: 'No se pudo generar el código.' });
     }
 });
 
