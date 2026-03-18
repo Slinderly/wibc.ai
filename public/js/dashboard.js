@@ -320,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('phoneTimeoutMsg').style.display = 'none';
         document.getElementById('pairingError').style.display = 'none';
         document.getElementById('phoneNumber').value = '';
+        document.getElementById('countryCode').selectedIndex = 0;
         const btn = document.getElementById('requestCodeBtn');
         btn.disabled = false; btn.textContent = 'Obtener Código';
     };
@@ -359,11 +360,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('requestCodeBtn').addEventListener('click', async () => {
         const btn = document.getElementById('requestCodeBtn');
-        const phone = document.getElementById('phoneNumber').value.replace(/\D/g, '');
+        const countryCode = document.getElementById('countryCode').value;
+        const localNumber = document.getElementById('phoneNumber').value.replace(/\D/g, '');
+        const phone = countryCode + localNumber;
         const errorEl = document.getElementById('pairingError');
 
-        if (!phone || phone.length < 7) {
-            errorEl.textContent = 'Ingresa un número válido con código de país (ej: 59171234567).';
+        if (!localNumber || localNumber.length < 5) {
+            errorEl.textContent = 'Ingresa un número de teléfono válido (sin código de país).';
             errorEl.style.display = 'block'; return;
         }
 

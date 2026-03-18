@@ -159,65 +159,87 @@ const startBaileysWithPairingCode = async (userId, sessionId, phoneNumber) => {
 
     const sock = await createSocket(userId, sessionId);
 
-    const qrTimeout = setTimeout(() => {
+    const sessionTimeout = setTimeout(() => {
         if (connStatus[key] !== 'connected') {
+            console.log(`[wibc.ai] Timeout sesión pairing ${key}`);
             connStatus[key] = 'timeout';
-            delete qrCodes[key];
             terminateSession(key);
         }
     }, 60000);
 
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update;
-
-        if (connection === 'close') {
-            clearTimeout(qrTimeout);
-            const code = (lastDisconnect?.error instanceof Boom)
-                ? lastDisconnect.error.output?.statusCode
-                : lastDisconnect.error?.statusCode;
-
-            delete qrCodes[key];
-
-            if (wasConnected[key]) {
-                connStatus[key] = 'disconnected';
-                setTimeout(() => startBaileys(userId, sessionId), 5000);
-            } else {
-                connStatus[key] = 'disconnected';
-                if (code === DisconnectReason.loggedOut && fs.existsSync(folder)) {
-                    fs.rmSync(folder, { recursive: true, force: true });
-                }
-                userSessions[userId]?.delete(sessionId);
-            }
-        } else if (connection === 'open') {
-            clearTimeout(qrTimeout);
-            wasConnected[key] = true;
-            connStatus[key] = 'connected';
-            delete qrCodes[key];
-
-            const me = sock.authState?.creds?.me;
-            const rawPhone = me?.id ? me.id.split(':')[0].split('@')[0] : null;
-            deviceInfo[key] = {
-                phone: rawPhone || phoneNumber,
-                name: me?.name || null,
-                connectedAt: new Date().toISOString(),
-            };
-            console.log(`[wibc.ai] Conectado por código ${key} (${deviceInfo[key].phone})`);
-        }
-    });
-
     return new Promise((resolve, reject) => {
-        const codeTimeout = setTimeout(() => reject(new Error('Timeout código')), 15000);
-        setTimeout(async () => {
-            try {
-                const clean = phoneNumber.replace(/\D/g, '');
-                const code = await sock.requestPairingCode(clean);
-                clearTimeout(codeTimeout);
-                resolve(code);
-            } catch (err) {
-                clearTimeout(codeTimeout);
-                reject(err);
+        let codeRequested = false;
+
+        // requestPairingCode MUST be called when the 'qr' event fires —
+        // that is the exact moment WhatsApp is waiting for either a QR scan
+        // or a pairing code. Calling it too early or too late causes the
+        // "check your phone number" error.
+        sock.ev.on('connection.update', async (update) => {
+            const { connection, lastDisconnect, qr } = update;
+
+            if (qr && !codeRequested) {
+                codeRequested = true;
+                try {
+                    const clean = phoneNumber.replace(/\D/g, '');
+                    console.log(`[wibc.ai] Solicitando código de emparejamiento para ${clean}`);
+                    const code = await sock.requestPairingCode(clean);
+                    console.log(`[wibc.ai] Código obtenido para ${key}`);
+                    resolve(code);
+                } catch (err) {
+                    console.error(`[wibc.ai] Error requestPairingCode ${key}:`, err.message);
+                    clearTimeout(sessionTimeout);
+                    connStatus[key] = 'disconnected';
+                    terminateSession(key);
+                    userSessions[userId]?.delete(sessionId);
+                    reject(err);
+                }
             }
-        }, 3000);
+
+            if (connection === 'close') {
+                clearTimeout(sessionTimeout);
+                const statusCode = (lastDisconnect?.error instanceof Boom)
+                    ? lastDisconnect.error.output?.statusCode
+                    : lastDisconnect.error?.statusCode;
+
+                delete qrCodes[key];
+
+                if (wasConnected[key]) {
+                    connStatus[key] = 'disconnected';
+                    setTimeout(() => startBaileys(userId, sessionId), 5000);
+                } else {
+                    connStatus[key] = 'disconnected';
+                    if (statusCode === DisconnectReason.loggedOut && fs.existsSync(folder)) {
+                        fs.rmSync(folder, { recursive: true, force: true });
+                    }
+                    userSessions[userId]?.delete(sessionId);
+                    if (!codeRequested) reject(new Error('Conexión cerrada antes de obtener código'));
+                }
+            } else if (connection === 'open') {
+                clearTimeout(sessionTimeout);
+                wasConnected[key] = true;
+                connStatus[key] = 'connected';
+                delete qrCodes[key];
+
+                const me = sock.authState?.creds?.me;
+                const rawPhone = me?.id ? me.id.split(':')[0].split('@')[0] : null;
+                deviceInfo[key] = {
+                    phone: rawPhone || phoneNumber,
+                    name: me?.name || null,
+                    connectedAt: new Date().toISOString(),
+                };
+                console.log(`[wibc.ai] Conectado por código ${key} (${deviceInfo[key].phone})`);
+            }
+        });
+
+        // Safety net: if QR event never fires within 30s, abort
+        setTimeout(() => {
+            if (!codeRequested) {
+                clearTimeout(sessionTimeout);
+                terminateSession(key);
+                userSessions[userId]?.delete(sessionId);
+                reject(new Error('Sin respuesta de WhatsApp. Intenta de nuevo.'));
+            }
+        }, 30000);
     });
 };
 
