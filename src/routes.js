@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { getQR, initSession, startBaileysWithPairingCode } = require('./whatsapp');
+const { getQR, getDevices, initSession, startBaileysWithPairingCode } = require('./whatsapp');
 
 const dataDir = path.join(__dirname, '../data');
 const usersFile = path.join(dataDir, 'users.json');
@@ -13,7 +13,6 @@ const ensureDataFiles = () => {
     if (!fs.existsSync(userDataDir)) fs.mkdirSync(userDataDir, { recursive: true });
     if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, JSON.stringify([]));
 };
-
 ensureDataFiles();
 
 router.post('/login', (req, res) => {
@@ -26,34 +25,27 @@ router.post('/login', (req, res) => {
     let user = users.find(u => u.username === username);
 
     if (user) {
-        if (user.password === password) {
-            return res.json({ success: true, userId: user.id });
-        } else {
-            return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
-        }
+        if (user.password === password) return res.json({ success: true, userId: user.id });
+        return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
     }
 
     const newUserId = Date.now().toString();
-    const newUser = { id: newUserId, username, password };
-    users.push(newUser);
+    users.push({ id: newUserId, username, password });
     fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 
     const userDataPath = path.join(userDataDir, `${newUserId}.json`);
-    const initialConfig = {
+    fs.writeFileSync(userDataPath, JSON.stringify({
         botMode: 'ai',
         manualRules: [],
-        aiConfig: { apiKey: '', prompt: 'Eres un vendedor virtual, usa los productos.', context: '' },
+        aiConfig: { apiKey: '', prompt: 'Eres un vendedor virtual.', context: '' },
         products: []
-    };
-    fs.writeFileSync(userDataPath, JSON.stringify(initialConfig, null, 2));
+    }, null, 2));
 
     res.json({ success: true, userId: newUserId, message: 'Usuario creado y logueado' });
 });
 
 router.get('/data/:userId', (req, res) => {
-    const { userId } = req.params;
-    const userDataPath = path.join(userDataDir, `${userId}.json`);
-
+    const userDataPath = path.join(userDataDir, `${req.params.userId}.json`);
     if (fs.existsSync(userDataPath)) {
         res.json(JSON.parse(fs.readFileSync(userDataPath)));
     } else {
@@ -62,37 +54,30 @@ router.get('/data/:userId', (req, res) => {
 });
 
 router.post('/data/:userId', (req, res) => {
-    const { userId } = req.params;
-    const userDataPath = path.join(userDataDir, `${userId}.json`);
-
+    const userDataPath = path.join(userDataDir, `${req.params.userId}.json`);
     try {
         fs.writeFileSync(userDataPath, JSON.stringify(req.body, null, 2));
         res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error al guardar datos' });
+    } catch {
+        res.status(500).json({ success: false, message: 'Error al guardar' });
     }
 });
 
-// Obtener QR (polling)
 router.get('/qr/:userId', getQR);
-
-// Inicializar bot con QR
+router.get('/devices/:userId', getDevices);
 router.post('/init-bot', initSession);
 
-// Vincular por número de teléfono (código de emparejamiento)
 router.post('/request-pairing-code', async (req, res) => {
     const { userId, phoneNumber } = req.body;
-
     if (!userId || !phoneNumber) {
         return res.status(400).json({ success: false, message: 'Faltan userId o phoneNumber' });
     }
-
     try {
         const code = await startBaileysWithPairingCode(userId, phoneNumber);
         res.json({ success: true, code });
     } catch (err) {
-        console.error('[wibc.ai] Error solicitando código de emparejamiento:', err);
-        res.status(500).json({ success: false, message: 'No se pudo generar el código. Verifica el número e intenta de nuevo.' });
+        console.error('[wibc.ai] Error código emparejamiento:', err);
+        res.status(500).json({ success: false, message: 'No se pudo generar el código. Verifica el número.' });
     }
 });
 

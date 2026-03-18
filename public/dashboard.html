@@ -14,10 +14,10 @@
     <nav class="sidebar glassmorphism">
         <h1 class="logo">wibc<span class="highlight">.ai</span></h1>
         <ul class="nav-links">
-            <li class="active" data-view="products"><span>🛍️</span> Productos</li>
-            <li data-view="ai-config"><span>🧠</span> Inteligencia Artificial</li>
-            <li data-view="manual-bot"><span>⚙️</span> Automatización</li>
-            <li data-view="whatsapp"><span>📱</span> WhatsApp</li>
+            <li class="active" data-view="products">Productos</li>
+            <li data-view="ai-config">Inteligencia Artificial</li>
+            <li data-view="manual-bot">Automatización</li>
+            <li data-view="whatsapp">WhatsApp</li>
         </ul>
         <button id="logoutBtn" class="btn-outline">Cerrar Sesión</button>
     </nav>
@@ -53,8 +53,8 @@
                     <div class="input-group">
                         <label for="botMode">Modo del Bot</label>
                         <select id="botMode">
-                            <option value="ai">🧠 Inteligencia Artificial</option>
-                            <option value="manual">⚙️ Solo Reglas Manuales</option>
+                            <option value="ai">Inteligencia Artificial</option>
+                            <option value="manual">Solo Reglas Manuales</option>
                         </select>
                     </div>
                     <div class="input-group">
@@ -77,7 +77,7 @@
         <!-- Manual Bot View -->
         <section id="view-manual-bot" class="view-section">
             <h2>Automatización Manual</h2>
-            <p style="margin-bottom: 16px; color: var(--text-muted); font-size:0.9rem;">Respuestas automáticas por palabras clave cuando el modo IA está desactivado.</p>
+            <p style="margin-bottom:16px;color:var(--text-muted);font-size:0.9rem;">Respuestas automáticas por palabras clave cuando el modo IA está desactivado.</p>
             <div class="card glassmorphism">
                 <form id="ruleForm" class="flex-form">
                     <input type="text" id="ruleKeyword" placeholder="Palabra clave (ej: hola)" required>
@@ -91,38 +91,55 @@
         <!-- WhatsApp View -->
         <section id="view-whatsapp" class="view-section">
             <h2>Conexión a WhatsApp</h2>
-            <div class="card glassmorphism">
 
-                <!-- Method Tabs -->
+            <!-- Device list -->
+            <div class="card glassmorphism" id="deviceCard">
+                <h3 style="margin-bottom:14px;font-size:1rem;font-weight:600;">Dispositivo vinculado</h3>
+                <div id="deviceInfo">
+                    <p style="color:var(--text-muted);font-size:0.9rem;">Sin conexión activa.</p>
+                </div>
+            </div>
+
+            <!-- Connection methods -->
+            <div class="card glassmorphism" id="connectCard">
                 <div class="connect-tabs">
-                    <button class="connect-tab active" data-panel="qr-panel">📷 Código QR</button>
-                    <button class="connect-tab" data-panel="phone-panel">📞 Número de Celular</button>
+                    <button class="connect-tab active" data-panel="qr-panel">Código QR</button>
+                    <button class="connect-tab" data-panel="phone-panel">Número de Celular</button>
                 </div>
 
                 <!-- QR Panel -->
                 <div id="qr-panel" class="connect-panel active">
-                    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:14px;">
-                        Abre WhatsApp → Dispositivos vinculados → Vincular dispositivo y escanea el código.
+                    <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:14px;">
+                        Abre WhatsApp > Dispositivos vinculados > Vincular dispositivo y escanea el código.
                     </p>
                     <button id="startBotBtn" class="btn-primary" style="margin-bottom:16px;">Generar Código QR</button>
 
-                    <div class="qr-wrapper">
+                    <div class="qr-wrapper" id="qrWrapper" style="display:none;">
                         <div class="qr-box" id="qrBoxContainer">
                             <div id="qrcode"></div>
                         </div>
-                        <p id="qrStatus" style="display:none;"></p>
+                        <p id="qrStatus"></p>
+                        <div id="qrTimer" class="timer-bar-wrap" style="display:none;">
+                            <div class="timer-bar" id="timerBar"></div>
+                            <span class="timer-label" id="timerLabel">30s</span>
+                        </div>
+                    </div>
+
+                    <div id="qrTimeoutMsg" style="display:none;text-align:center;padding:12px 0;">
+                        <p style="color:var(--text-muted);margin-bottom:12px;">Tiempo agotado. No se escaneó el código.</p>
+                        <button id="retryQrBtn" class="btn-secondary">Intentar de nuevo</button>
                     </div>
                 </div>
 
                 <!-- Phone Panel -->
                 <div id="phone-panel" class="connect-panel">
-                    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px;">
-                        Ingresa tu número con código de país (sin + ni espacios). Recibirás un código de 8 dígitos para ingresar en WhatsApp.
+                    <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:16px;">
+                        Ingresa tu número con código de país (sin + ni espacios). Recibirás un código de 8 dígitos.
                     </p>
                     <div class="phone-input-row">
                         <div class="input-group">
                             <label for="phoneNumber">Número de teléfono</label>
-                            <input type="tel" id="phoneNumber" placeholder="591 71234567" inputmode="numeric">
+                            <input type="tel" id="phoneNumber" placeholder="59171234567" inputmode="numeric">
                         </div>
                         <button id="requestCodeBtn" class="btn-primary">Obtener Código</button>
                     </div>
@@ -131,24 +148,24 @@
 
                     <div class="pairing-code-display" id="pairingCodeDisplay">
                         <p>Ingresa este código en WhatsApp:</p>
-                        <div class="pairing-code" id="pairingCode">— — — —</div>
+                        <div class="pairing-code" id="pairingCode">---- ----</div>
                         <div class="instructions">
-                            WhatsApp → <strong>Dispositivos vinculados</strong> → <strong>Vincular dispositivo</strong> → <strong>Vincular con número de teléfono</strong>
+                            WhatsApp > <strong>Dispositivos vinculados</strong> > <strong>Vincular dispositivo</strong> > <strong>Vincular con número de teléfono</strong>
                         </div>
+                        <p id="phoneTimer" style="color:var(--text-muted);font-size:0.8rem;margin-top:8px;"></p>
                     </div>
 
-                    <div id="phoneConnectedBadge" class="connected-badge" style="display:none;">
-                        <div class="check-icon">✅</div>
-                        <p>¡WhatsApp conectado correctamente!</p>
+                    <div id="phoneTimeoutMsg" style="display:none;text-align:center;padding:12px 0;">
+                        <p style="color:var(--text-muted);margin-bottom:12px;">Tiempo agotado. El código expiró.</p>
+                        <button id="retryPhoneBtn" class="btn-secondary">Intentar de nuevo</button>
                     </div>
                 </div>
 
-                <!-- Shared connected state (QR) -->
+                <!-- Connected state (shared) -->
                 <div id="connectedBadge" class="connected-badge" style="display:none;">
-                    <div class="check-icon">✅</div>
-                    <p>¡WhatsApp conectado correctamente!</p>
+                    <div class="check-icon">&#10003;</div>
+                    <p>WhatsApp conectado correctamente</p>
                 </div>
-
             </div>
         </section>
 
@@ -156,25 +173,12 @@
 
     <!-- Mobile Bottom Navigation -->
     <nav class="bottom-nav">
-        <button class="bottom-nav-item active" data-view="products">
-            <span class="nav-icon">🛍️</span>
-            <span>Productos</span>
-        </button>
-        <button class="bottom-nav-item" data-view="ai-config">
-            <span class="nav-icon">🧠</span>
-            <span>IA</span>
-        </button>
-        <button class="bottom-nav-item" data-view="manual-bot">
-            <span class="nav-icon">⚙️</span>
-            <span>Reglas</span>
-        </button>
-        <button class="bottom-nav-item" data-view="whatsapp">
-            <span class="nav-icon">📱</span>
-            <span>WhatsApp</span>
-        </button>
+        <button class="bottom-nav-item active" data-view="products">Productos</button>
+        <button class="bottom-nav-item" data-view="ai-config">IA</button>
+        <button class="bottom-nav-item" data-view="manual-bot">Reglas</button>
+        <button class="bottom-nav-item" data-view="whatsapp">WhatsApp</button>
     </nav>
 
-    <!-- Toast notification -->
     <div class="toast" id="toast"></div>
 
     <script src="/js/dashboard.js"></script>

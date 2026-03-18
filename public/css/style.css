@@ -396,9 +396,7 @@ h2 { margin-bottom: 20px; font-weight: 600; font-size: 1.3rem; }
         touch-action: manipulation;
         user-select: none;
     }
-    .bottom-nav-item .nav-icon { font-size: 1.3rem; line-height: 1; }
-    .bottom-nav-item.active { color: var(--primary); }
-    .bottom-nav-item.active .nav-icon { transform: scale(1.1); }
+    .bottom-nav-item.active { color: var(--primary); font-weight: 600; }
 
     /* Mobile top bar */
     .mobile-topbar {
@@ -441,4 +439,81 @@ h2 { margin-bottom: 20px; font-weight: 600; font-size: 1.3rem; }
 .mobile-topbar { display: none; }
 @media screen and (max-width: 768px) {
     .mobile-topbar { display: flex; }
+}
+
+/* ── Device Info ── */
+.device-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+}
+.device-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.device-dot.connected {
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+.device-dot.connecting {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+.device-details { display: flex; flex-direction: column; gap: 3px; }
+.device-phone { font-weight: 600; font-size: 0.95rem; }
+.device-meta { font-size: 0.8rem; color: var(--text-muted); }
+
+/* ── Timer Bar ── */
+.timer-bar-wrap {
+    width: 100%;
+    max-width: 240px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+}
+.timer-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--primary);
+    border-radius: 4px;
+    transition: width 1s linear, background 1s;
+}
+.timer-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    min-width: 28px;
+    text-align: right;
+}
+
+/* Bottom nav items: no icons, just text */
+.bottom-nav-item {
+    font-size: 0.72rem;
+}
+.bottom-nav-item.active {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* Connected check icon */
+.check-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.15);
+    border: 2px solid var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--success);
+    font-weight: 700;
 }
