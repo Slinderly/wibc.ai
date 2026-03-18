@@ -4,23 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>wibc.ai - Dashboard</title>
-    <link rel="stylesheet" href="/css/style.css?v=2">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
 </head>
 <body class="dashboard-bg">
+
+    <!-- Desktop Sidebar -->
     <nav class="sidebar glassmorphism">
         <h1 class="logo">wibc<span class="highlight">.ai</span></h1>
         <ul class="nav-links">
-            <li class="active" data-view="products">🛍️ Productos</li>
-            <li data-view="ai-config">🧠 Inteligencia Artificial</li>
-            <li data-view="manual-bot">⚙️ Automatización Manual</li>
-            <li data-view="whatsapp">📱 Conexión WhatsApp</li>
+            <li class="active" data-view="products"><span>🛍️</span> Productos</li>
+            <li data-view="ai-config"><span>🧠</span> Inteligencia Artificial</li>
+            <li data-view="manual-bot"><span>⚙️</span> Automatización</li>
+            <li data-view="whatsapp"><span>📱</span> WhatsApp</li>
         </ul>
         <button id="logoutBtn" class="btn-outline">Cerrar Sesión</button>
     </nav>
 
+    <!-- Mobile Top Bar -->
+    <div class="mobile-topbar">
+        <h1 class="logo">wibc<span class="highlight">.ai</span></h1>
+        <button id="logoutBtnMobile" class="btn-outline" style="width:auto;padding:8px 14px;font-size:0.8rem;">Salir</button>
+    </div>
+
+    <!-- Main Content -->
     <main class="content">
+
         <!-- Products View -->
         <section id="view-products" class="view-section active">
             <h2>Gestión de Productos</h2>
@@ -29,38 +39,35 @@
                     <input type="text" id="prodName" placeholder="Nombre del producto" required>
                     <input type="number" id="prodPrice" placeholder="Precio" required>
                     <input type="text" id="prodDesc" placeholder="Descripción breve" required>
-                    <button type="submit" class="btn-primary">Añadir Producto</button>
+                    <button type="submit" class="btn-primary">Añadir</button>
                 </form>
             </div>
-            
-            <div id="productsList" class="products-grid">
-                <!-- Productos inyectados por JS -->
-            </div>
+            <div id="productsList" class="products-grid"></div>
         </section>
 
         <!-- AI Config View -->
         <section id="view-ai-config" class="view-section">
-            <h2>Configuración de Inteligencia Artificial</h2>
+            <h2>Configuración de IA</h2>
             <div class="card glassmorphism">
                 <form id="aiForm">
                     <div class="input-group">
-                        <label for="botMode">Modo del Bot Activo</label>
-                        <select id="botMode" style="width:100%; padding:12px; border-radius:8px; background:rgba(15,23,42,0.6); color:var(--text); border:1px solid var(--glass-border);">
-                            <option value="ai">🧠 Usar Inteligencia Artificial</option>
-                            <option value="manual">⚙️ Usar Solo Reglas Manuales</option>
+                        <label for="botMode">Modo del Bot</label>
+                        <select id="botMode">
+                            <option value="ai">🧠 Inteligencia Artificial</option>
+                            <option value="manual">⚙️ Solo Reglas Manuales</option>
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="apiKey">API Key (OpenAI / Tu Proveedor)</label>
-                        <input type="text" id="apiKey" placeholder="sk-...">
+                        <label for="apiKey">API Key de Google Gemini</label>
+                        <input type="text" id="apiKey" placeholder="AIza...">
                     </div>
                     <div class="input-group">
-                        <label for="aiPrompt">Prompt Principal (Personalidad del Bot)</label>
+                        <label for="aiPrompt">Personalidad del Bot</label>
                         <textarea id="aiPrompt" rows="4" placeholder="Eres un asistente de ventas amable..."></textarea>
                     </div>
                     <div class="input-group">
-                        <label for="aiContext">Prompts Constantes / Contexto Extra</label>
-                        <textarea id="aiContext" rows="3" placeholder="Ej: No ofrezcas descuentos mayores a 10%, recuerda siempre despedirte..."></textarea>
+                        <label for="aiContext">Contexto / Instrucciones Extra</label>
+                        <textarea id="aiContext" rows="3" placeholder="No ofrezcas descuentos mayores a 10%..."></textarea>
                     </div>
                     <button type="submit" class="btn-primary">Guardar Configuración</button>
                 </form>
@@ -69,34 +76,106 @@
 
         <!-- Manual Bot View -->
         <section id="view-manual-bot" class="view-section">
-            <h2>Automatización Manual (Sin IA)</h2>
-            <p style="margin-bottom: 20px; color: var(--text-muted);">Define reglas de respuesta automática por palabras clave para cuando el modo IA esté apagado.</p>
+            <h2>Automatización Manual</h2>
+            <p style="margin-bottom: 16px; color: var(--text-muted); font-size:0.9rem;">Respuestas automáticas por palabras clave cuando el modo IA está desactivado.</p>
             <div class="card glassmorphism">
                 <form id="ruleForm" class="flex-form">
-                    <input type="text" id="ruleKeyword" placeholder="Palabra clave o frase (ej: hola)" required>
-                    <input type="text" id="ruleReply" placeholder="Respuesta automática del bot" required>
-                    <button type="submit" class="btn-primary">Añadir Regla</button>
+                    <input type="text" id="ruleKeyword" placeholder="Palabra clave (ej: hola)" required>
+                    <input type="text" id="ruleReply" placeholder="Respuesta automática" required>
+                    <button type="submit" class="btn-primary">Añadir</button>
                 </form>
             </div>
-            <div id="rulesList" class="products-grid">
-                <!-- Reglas inyectadas por JS -->
-            </div>
+            <div id="rulesList" class="products-grid"></div>
         </section>
 
         <!-- WhatsApp View -->
         <section id="view-whatsapp" class="view-section">
             <h2>Conexión a WhatsApp</h2>
-            <div class="card glassmorphism text-center">
-                <p>Escanea el código QR con tu WhatsApp para conectar el Bot de Ventas.</p>
-                <button id="startBotBtn" class="btn-primary" style="margin-bottom: 20px;">Iniciar Bot</button>
-                
-                <div id="qrContainer" class="qr-box">
-                    <div id="qrcode"></div>
-                    <div id="qrStatus">Bot inactivo.</div>
+            <div class="card glassmorphism">
+
+                <!-- Method Tabs -->
+                <div class="connect-tabs">
+                    <button class="connect-tab active" data-panel="qr-panel">📷 Código QR</button>
+                    <button class="connect-tab" data-panel="phone-panel">📞 Número de Celular</button>
                 </div>
+
+                <!-- QR Panel -->
+                <div id="qr-panel" class="connect-panel active">
+                    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:14px;">
+                        Abre WhatsApp → Dispositivos vinculados → Vincular dispositivo y escanea el código.
+                    </p>
+                    <button id="startBotBtn" class="btn-primary" style="margin-bottom:16px;">Generar Código QR</button>
+
+                    <div class="qr-wrapper">
+                        <div class="qr-box" id="qrBoxContainer">
+                            <div id="qrcode"></div>
+                        </div>
+                        <p id="qrStatus" style="display:none;"></p>
+                    </div>
+                </div>
+
+                <!-- Phone Panel -->
+                <div id="phone-panel" class="connect-panel">
+                    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px;">
+                        Ingresa tu número con código de país (sin + ni espacios). Recibirás un código de 8 dígitos para ingresar en WhatsApp.
+                    </p>
+                    <div class="phone-input-row">
+                        <div class="input-group">
+                            <label for="phoneNumber">Número de teléfono</label>
+                            <input type="tel" id="phoneNumber" placeholder="591 71234567" inputmode="numeric">
+                        </div>
+                        <button id="requestCodeBtn" class="btn-primary">Obtener Código</button>
+                    </div>
+
+                    <div id="pairingError" class="error-msg" style="display:none;"></div>
+
+                    <div class="pairing-code-display" id="pairingCodeDisplay">
+                        <p>Ingresa este código en WhatsApp:</p>
+                        <div class="pairing-code" id="pairingCode">— — — —</div>
+                        <div class="instructions">
+                            WhatsApp → <strong>Dispositivos vinculados</strong> → <strong>Vincular dispositivo</strong> → <strong>Vincular con número de teléfono</strong>
+                        </div>
+                    </div>
+
+                    <div id="phoneConnectedBadge" class="connected-badge" style="display:none;">
+                        <div class="check-icon">✅</div>
+                        <p>¡WhatsApp conectado correctamente!</p>
+                    </div>
+                </div>
+
+                <!-- Shared connected state (QR) -->
+                <div id="connectedBadge" class="connected-badge" style="display:none;">
+                    <div class="check-icon">✅</div>
+                    <p>¡WhatsApp conectado correctamente!</p>
+                </div>
+
             </div>
         </section>
+
     </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="bottom-nav-item active" data-view="products">
+            <span class="nav-icon">🛍️</span>
+            <span>Productos</span>
+        </button>
+        <button class="bottom-nav-item" data-view="ai-config">
+            <span class="nav-icon">🧠</span>
+            <span>IA</span>
+        </button>
+        <button class="bottom-nav-item" data-view="manual-bot">
+            <span class="nav-icon">⚙️</span>
+            <span>Reglas</span>
+        </button>
+        <button class="bottom-nav-item" data-view="whatsapp">
+            <span class="nav-icon">📱</span>
+            <span>WhatsApp</span>
+        </button>
+    </nav>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
 
     <script src="/js/dashboard.js"></script>
 </body>

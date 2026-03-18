@@ -2,30 +2,20 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { getQR, initSession } = require('./whatsapp');
+const { getQR, initSession, startBaileysWithPairingCode } = require('./whatsapp');
 
-// Configuración de rutas de archivos
 const dataDir = path.join(__dirname, '../data');
 const usersFile = path.join(dataDir, 'users.json');
 const userDataDir = path.join(dataDir, 'user_data');
 
-// Middleware para asegurar que todas las carpetas y archivos existan
 const ensureDataFiles = () => {
-    if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
-    }
-    if (!fs.existsSync(userDataDir)) {
-        fs.mkdirSync(userDataDir, { recursive: true });
-    }
-    if (!fs.existsSync(usersFile)) {
-        fs.writeFileSync(usersFile, JSON.stringify([]));
-    }
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    if (!fs.existsSync(userDataDir)) fs.mkdirSync(userDataDir, { recursive: true });
+    if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, JSON.stringify([]));
 };
 
-// Ejecutar validación de archivos al cargar las rutas
 ensureDataFiles();
 
-// Autenticación - Login con auto-registro para prototipo
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -43,49 +33,38 @@ router.post('/login', (req, res) => {
         }
     }
 
-    // Auto-registro (Si el usuario no existe)
     const newUserId = Date.now().toString();
     const newUser = { id: newUserId, username, password };
     users.push(newUser);
-    
     fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 
-    // Crear archivo de configuración inicial del bot para el nuevo usuario
     const userDataPath = path.join(userDataDir, `${newUserId}.json`);
     const initialConfig = {
         botMode: 'ai',
         manualRules: [],
-        aiConfig: { 
-            apiKey: '', 
-            prompt: 'Eres un vendedor virtual, usa los productos.', 
-            context: '' 
-        },
+        aiConfig: { apiKey: '', prompt: 'Eres un vendedor virtual, usa los productos.', context: '' },
         products: []
     };
-    
     fs.writeFileSync(userDataPath, JSON.stringify(initialConfig, null, 2));
-    
+
     res.json({ success: true, userId: newUserId, message: 'Usuario creado y logueado' });
 });
 
-// Obtener configuración del bot y productos
 router.get('/data/:userId', (req, res) => {
     const { userId } = req.params;
     const userDataPath = path.join(userDataDir, `${userId}.json`);
-    
+
     if (fs.existsSync(userDataPath)) {
-        const data = JSON.parse(fs.readFileSync(userDataPath));
-        res.json(data);
+        res.json(JSON.parse(fs.readFileSync(userDataPath)));
     } else {
         res.status(404).json({ error: 'Datos no encontrados' });
     }
 });
 
-// Guardar configuración del bot y productos
 router.post('/data/:userId', (req, res) => {
     const { userId } = req.params;
     const userDataPath = path.join(userDataDir, `${userId}.json`);
-    
+
     try {
         fs.writeFileSync(userDataPath, JSON.stringify(req.body, null, 2));
         res.json({ success: true });
@@ -94,12 +73,27 @@ router.post('/data/:userId', (req, res) => {
     }
 });
 
-// --- RUTAS DE WHATSAPP ---
-
-// Obtener el QR (Polling desde el frontend)
+// Obtener QR (polling)
 router.get('/qr/:userId', getQR);
 
-// Inicializar el Bot (Cuando el usuario da click en "Conectar")
+// Inicializar bot con QR
 router.post('/init-bot', initSession);
+
+// Vincular por número de teléfono (código de emparejamiento)
+router.post('/request-pairing-code', async (req, res) => {
+    const { userId, phoneNumber } = req.body;
+
+    if (!userId || !phoneNumber) {
+        return res.status(400).json({ success: false, message: 'Faltan userId o phoneNumber' });
+    }
+
+    try {
+        const code = await startBaileysWithPairingCode(userId, phoneNumber);
+        res.json({ success: true, code });
+    } catch (err) {
+        console.error('[wibc.ai] Error solicitando código de emparejamiento:', err);
+        res.status(500).json({ success: false, message: 'No se pudo generar el código. Verifica el número e intenta de nuevo.' });
+    }
+});
 
 module.exports = router;

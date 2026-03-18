@@ -1,0 +1,10 @@
+{
+  "botMode": "ai",
+  "manualRules": [],
+  "aiConfig": {
+    "apiKey": "",
+    "prompt": "Eres un vendedor virtual, usa los productos.",
+    "context": ""
+  },
+  "products": []
+}
