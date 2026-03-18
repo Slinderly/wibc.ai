@@ -4,14 +4,14 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-  "start": "node server.js"
-},
+    "start": "node server.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@google/genai": "^1.45.0",
+    "@google/genai": "^1.46.0",
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "cors": "^2.8.6",
