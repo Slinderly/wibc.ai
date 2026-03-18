@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 const path = require('path');
@@ -35,7 +35,15 @@ const createSocket = async (userId, sessionId) => {
     if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
 
     const { state, saveCreds } = await useMultiFileAuthState(folder);
-    const { version } = await fetchLatestBaileysVersion();
+
+    let version;
+    try {
+        const result = await fetchLatestBaileysVersion();
+        version = result.version;
+    } catch (_) {
+        version = [2, 3000, 1015901307];
+    }
+
     const key = makeKey(userId, sessionId);
 
     connStatus[key] = 'connecting';
@@ -45,10 +53,11 @@ const createSocket = async (userId, sessionId) => {
         version,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
-        browser: ['Ubuntu', 'Chrome', '20.0.04'],
+        browser: ['WhatsApp', 'Chrome', '126.0.6478.127'],
         syncFullHistory: false,
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 0,
+        qrTimeout: 60000,
     });
 
     sessions[key] = sock;
@@ -87,7 +96,7 @@ const startBaileys = async (userId, sessionId) => {
                 delete qrCodes[key];
                 terminateSession(key);
             }
-        }, 30000);
+        }, 60000);
     }
 
     sock.ev.on('connection.update', async (update) => {
@@ -156,7 +165,7 @@ const startBaileysWithPairingCode = async (userId, sessionId, phoneNumber) => {
             delete qrCodes[key];
             terminateSession(key);
         }
-    }, 30000);
+    }, 60000);
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;

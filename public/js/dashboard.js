@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let qrCountdownInterval = null;
     let qrRendered = false;
     let activeQRSessionId = null;
-    const QR_TIMEOUT_MS = 30000;
+    const QR_TIMEOUT_MS = 60000;
 
     const clearAllPolling = () => {
         clearInterval(qrPollInterval); clearInterval(qrCountdownInterval);
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.display = 'none';
             clearInterval(qrPollInterval);
             checkQR();
-            qrPollInterval = setInterval(checkQR, 3000);
+            qrPollInterval = setInterval(checkQR, 2000);
             setTimeout(() => clearInterval(qrPollInterval), QR_TIMEOUT_MS + 5000);
         } catch {
             btn.disabled = false; btn.textContent = 'Generar Código QR';
