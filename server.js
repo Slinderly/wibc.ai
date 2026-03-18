@@ -6,7 +6,8 @@ const routes = require('./src/routes');
 const { startBaileys } = require('./src/whatsapp');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
 
 app.use(cors());
 app.use(express.json());
@@ -27,8 +28,8 @@ app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/dashboard.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`[wibc.ai] 🚀 Servidor corriendo en http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+    console.log(`[wibc.ai] 🚀 Servidor corriendo en http://${HOST}:${PORT}`);
 
     // --- LÓGICA DE AUTO-RECONEXIÓN ---
     // Buscar todas las sesiones guardadas en la carpeta 'data' y reconectarlas
