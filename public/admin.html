@@ -32,85 +32,60 @@
         <div class="topbar-left">
             <span class="topbar-logo">wibc<span class="hl">.ai</span> <span class="topbar-badge">admin</span></span>
         </div>
-        <div class="topbar-tabs">
-            <button class="topbar-tab active" data-tab="files">
-                <i data-lucide="folder-open"></i> Archivos
-            </button>
-            <button class="topbar-tab" data-tab="logs">
-                <i data-lucide="scroll-text"></i> Logs
-            </button>
-        </div>
         <div class="topbar-right">
             <button id="logoutAdminBtn" class="a-btn-ghost">
-                <i data-lucide="log-out"></i> Salir
+                <i data-lucide="log-out"></i> <span class="logout-label">Salir</span>
             </button>
         </div>
     </header>
 
-    <!-- Files Tab -->
-    <div id="tab-files" class="tab-content active">
-        <div class="files-layout">
+    <!-- Files Panel -->
+    <div class="files-layout" id="filesLayout">
 
-            <!-- Sidebar: file tree -->
-            <aside class="file-tree-panel">
-                <div class="tree-toolbar">
-                    <span class="tree-path" id="treePath">/</span>
-                    <div class="tree-actions">
-                        <button class="icon-btn" id="btnNewFile" title="Nuevo archivo"><i data-lucide="file-plus"></i></button>
-                        <button class="icon-btn" id="btnNewDir" title="Nueva carpeta"><i data-lucide="folder-plus"></i></button>
-                        <button class="icon-btn" id="btnRefresh" title="Actualizar"><i data-lucide="refresh-cw"></i></button>
-                    </div>
+        <!-- Sidebar: file tree -->
+        <aside class="file-tree-panel" id="fileTreePanel">
+            <div class="tree-toolbar">
+                <span class="tree-path" id="treePath">/</span>
+                <div class="tree-actions">
+                    <button class="icon-btn" id="btnNewFile" title="Nuevo archivo"><i data-lucide="file-plus"></i></button>
+                    <button class="icon-btn" id="btnNewDir" title="Nueva carpeta"><i data-lucide="folder-plus"></i></button>
+                    <button class="icon-btn" id="btnRefresh" title="Actualizar"><i data-lucide="refresh-cw"></i></button>
                 </div>
-                <div class="file-tree" id="fileTree">
-                    <div class="tree-loading">Cargando...</div>
-                </div>
-            </aside>
+            </div>
+            <div class="file-tree" id="fileTree">
+                <div class="tree-loading">Cargando...</div>
+            </div>
+        </aside>
 
-            <!-- Editor panel -->
-            <section class="editor-panel">
-                <div class="editor-toolbar">
-                    <span class="editor-filename" id="editorFilename">— ningún archivo —</span>
-                    <div class="editor-actions">
-                        <button class="a-btn-primary" id="btnSave" disabled>
-                            <i data-lucide="save"></i> Guardar
-                        </button>
-                        <button class="a-btn-danger" id="btnDelete" disabled>
-                            <i data-lucide="trash-2"></i> Eliminar
-                        </button>
-                        <button class="a-btn-ghost" id="btnRename" disabled>
-                            <i data-lucide="pencil"></i> Renombrar
-                        </button>
-                    </div>
-                </div>
-                <div class="editor-body">
-                    <textarea id="codeEditor" class="code-editor" placeholder="Selecciona un archivo para editarlo..." spellcheck="false" disabled></textarea>
-                    <div id="editorPlaceholder" class="editor-placeholder">
-                        <i data-lucide="file-code-2" style="width:48px;height:48px;opacity:0.2;"></i>
-                        <p>Selecciona un archivo del árbol para empezar a editar</p>
-                    </div>
-                </div>
-                <div class="editor-statusbar">
-                    <span id="editorStatus"></span>
-                    <span id="editorSize"></span>
-                </div>
-            </section>
-
-        </div>
-    </div>
-
-    <!-- Logs Tab -->
-    <div id="tab-logs" class="tab-content">
-        <div class="logs-panel">
-            <div class="logs-toolbar">
-                <h3>Logs del servidor &nbsp;<span class="live-badge"><span class="live-dot"></span>LIVE</span></h3>
-                <button class="a-btn-ghost" id="btnRefreshLogs">
-                    <i data-lucide="refresh-cw"></i> Reconectar
+        <!-- Editor panel -->
+        <section class="editor-panel" id="editorPanel">
+            <div class="editor-toolbar">
+                <button class="icon-btn mobile-back-btn" id="btnBack" title="Volver">
+                    <i data-lucide="arrow-left"></i>
                 </button>
+                <span class="editor-filename" id="editorFilename">— ningún archivo —</span>
+                <div class="editor-actions">
+                    <button class="a-btn-primary" id="btnSave" disabled>
+                        <i data-lucide="save"></i> <span class="btn-label">Guardar</span>
+                    </button>
+                    <button class="a-btn-ghost" id="btnRename" disabled>
+                        <i data-lucide="pencil"></i> <span class="btn-label">Renombrar</span>
+                    </button>
+                </div>
             </div>
-            <div id="logsContainer" class="logs-container">
-                <p style="color:#666;">Cargando logs...</p>
+            <div class="editor-body">
+                <textarea id="codeEditor" class="code-editor" placeholder="Selecciona un archivo para editarlo..." spellcheck="false" disabled></textarea>
+                <div id="editorPlaceholder" class="editor-placeholder">
+                    <i data-lucide="file-code-2" style="width:48px;height:48px;opacity:0.2;"></i>
+                    <p>Selecciona un archivo del árbol para empezar a editar</p>
+                </div>
             </div>
-        </div>
+            <div class="editor-statusbar">
+                <span id="editorStatus"></span>
+                <span id="editorSize"></span>
+            </div>
+        </section>
+
     </div>
 
 </div>

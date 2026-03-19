@@ -9,16 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const api = async (method, endpoint, body, params) => {
         let url = `/admin-api/${endpoint}`;
-        if (params) {
-            const q = new URLSearchParams(params);
-            url += '?' + q.toString();
-        }
+        if (params) url += '?' + new URLSearchParams(params).toString();
         const res = await fetch(url, {
             method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: body ? JSON.stringify(body) : undefined,
         });
         return { ok: res.ok, status: res.status, data: await res.json() };
@@ -74,29 +68,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tryAutoLogin();
 
-    // ── Tabs ──
-    document.querySelectorAll('.topbar-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
-        });
-    });
+    // ── Mobile: back button ──
+    const filesLayout = document.getElementById('filesLayout');
+
+    const showEditor = () => filesLayout.classList.add('show-editor');
+    const showTree   = () => filesLayout.classList.remove('show-editor');
+
+    document.getElementById('btnBack').addEventListener('click', showTree);
 
     // ── File Tree ──
-    const fileTree    = document.getElementById('fileTree');
-    const treePath    = document.getElementById('treePath');
+    const fileTree       = document.getElementById('fileTree');
+    const treePath       = document.getElementById('treePath');
     const editorFilename = document.getElementById('editorFilename');
-    const codeEditor  = document.getElementById('codeEditor');
-    const editorPH    = document.getElementById('editorPlaceholder');
-    const btnSave     = document.getElementById('btnSave');
-    const btnDelete   = document.getElementById('btnDelete');
-    const btnRename   = document.getElementById('btnRename');
-    const editorStatus = document.getElementById('editorStatus');
-    const editorSize  = document.getElementById('editorSize');
+    const codeEditor     = document.getElementById('codeEditor');
+    const editorPH       = document.getElementById('editorPlaceholder');
+    const btnSave        = document.getElementById('btnSave');
+    const btnRename      = document.getElementById('btnRename');
+    const editorStatus   = document.getElementById('editorStatus');
+    const editorSize     = document.getElementById('editorSize');
 
-    // Build tree for given relative path
     const loadTree = async (relPath) => {
         fileTree.innerHTML = '<div class="tree-loading">Cargando...</div>';
         const r = await api('GET', 'ls', null, { path: relPath || '/' });
@@ -107,36 +97,72 @@ document.addEventListener('DOMContentLoaded', () => {
         treePath.textContent = '/' + (serverPath === '.' ? '' : serverPath);
         fileTree.innerHTML = '';
 
-        // Back button
+        // Back button (navigate up)
         if (serverPath && serverPath !== '.') {
-            const back = makeTreeItem('..', true, '');
+            const back = makeTreeItem('..', true, '', true);
             back.style.color = '#666';
-            back.addEventListener('click', () => {
+            back.querySelector('.tree-item-name').addEventListener('click', () => {
                 const parent = serverPath.split('/').slice(0, -1).join('/');
                 loadTree(parent);
             });
+            // hide delete on ".." item
+            back.querySelector('.tree-item-del').style.display = 'none';
             fileTree.appendChild(back);
         }
 
         items.forEach(item => {
             const el = makeTreeItem(item.name, item.isDir, item.path);
+            const nameEl = el.querySelector('.tree-item-name');
+            const delBtn = el.querySelector('.tree-item-del');
+
             if (item.isDir) {
-                el.addEventListener('click', () => loadTree(item.path));
+                nameEl.addEventListener('click', () => loadTree(item.path));
+                el.querySelector('svg:first-child') && el.querySelector('i') && (el.onclick = null);
             } else {
-                el.addEventListener('click', () => openFile(item.path, item.name, el));
+                nameEl.addEventListener('click', () => openFile(item.path, item.name, el));
+                el.querySelector('.tree-item-icon')?.addEventListener('click', () => openFile(item.path, item.name, el));
             }
+
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                triggerDelete(item.path, item.name, item.isDir);
+            });
+
             fileTree.appendChild(el);
         });
+
         lucide.createIcons();
     };
 
-    const makeTreeItem = (name, isDir, filePath) => {
+    const makeTreeItem = (name, isDir, filePath, isBack = false) => {
         const el = document.createElement('div');
         el.className = 'tree-item' + (isDir ? ' is-dir' : '');
         el.dataset.path = filePath;
-        el.innerHTML = isDir
-            ? `<i data-lucide="folder"></i><span class="tree-item-name">${name}</span>`
-            : `<i data-lucide="file-text"></i><span class="tree-item-name">${name}</span>`;
+
+        const iconName = isBack ? 'corner-left-up' : (isDir ? 'folder' : 'file-text');
+        el.innerHTML = `
+            <i data-lucide="${iconName}" class="tree-item-icon"></i>
+            <span class="tree-item-name">${name}</span>
+            <button class="tree-item-del" title="Eliminar"><i data-lucide="trash-2"></i></button>
+        `;
+
+        // Clicking anywhere on a file item (not the del btn) opens the file
+        if (!isDir && !isBack) {
+            el.addEventListener('click', (e) => {
+                if (!e.target.closest('.tree-item-del')) {
+                    openFile(filePath, name, el);
+                }
+            });
+        }
+        // Clicking anywhere on a dir item (not the del btn) navigates
+        if (isDir && !isBack) {
+            el.addEventListener('click', (e) => {
+                if (!e.target.closest('.tree-item-del')) {
+                    loadTree(filePath);
+                }
+            });
+        }
+
         return el;
     };
 
@@ -144,8 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
         el?.classList.add('active');
 
+        editorStatus.textContent = 'Cargando...';
         const r = await api('GET', 'read', null, { path: filePath });
-        if (!r.ok) { alert(r.data.error); return; }
+        if (!r.ok) { alert(r.data.error); editorStatus.textContent = ''; return; }
 
         currentFile = { path: filePath, name };
         codeEditor.value = r.data.content;
@@ -153,10 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
         editorPH.style.display = 'none';
         editorFilename.textContent = '/' + filePath;
         btnSave.disabled = false;
-        btnDelete.disabled = false;
         btnRename.disabled = false;
         editorStatus.textContent = 'Listo';
         editorSize.textContent = `${r.data.content.length} caracteres`;
+
+        // On mobile: switch to editor view
+        showEditor();
     };
 
     // ── Save ──
@@ -166,11 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
         editorStatus.textContent = 'Guardando...';
         const r = await api('POST', 'write', { path: currentFile.path, content: codeEditor.value });
         btnSave.disabled = false;
-        editorStatus.textContent = r.ok ? 'Guardado' : `Error: ${r.data.error}`;
+        editorStatus.textContent = r.ok ? 'Guardado ✓' : `Error: ${r.data.error}`;
         editorSize.textContent = `${codeEditor.value.length} caracteres`;
     });
 
-    // Ctrl+S save
+    // Ctrl+S / Cmd+S save
     codeEditor.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
@@ -184,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!name) return;
         const filePath = currentPath && currentPath !== '.' ? `${currentPath}/${name}` : name;
         const r = await api('POST', 'write', { path: filePath, content: '' });
-        if (r.ok) { loadTree(currentPath); }
+        if (r.ok) loadTree(currentPath);
         else alert(r.data.error);
     });
 
@@ -201,35 +230,54 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Refresh ──
     document.getElementById('btnRefresh').addEventListener('click', () => loadTree(currentPath));
 
-    // ── Delete ──
-    const deleteModal = document.getElementById('deleteModal');
-    const deleteMsg   = document.getElementById('deleteModalMsg');
+    // ── Delete (generic: file or folder) ──
+    const deleteModal   = document.getElementById('deleteModal');
+    const deleteMsg     = document.getElementById('deleteModalMsg');
 
-    btnDelete.addEventListener('click', () => {
-        if (!currentFile) return;
-        pendingDelete = currentFile.path;
-        deleteMsg.textContent = `¿Eliminar "${currentFile.name}"? Esta acción no se puede deshacer.`;
+    const triggerDelete = (itemPath, itemName, isDir) => {
+        pendingDelete = { path: itemPath, name: itemName, isDir };
+        const type = isDir ? 'carpeta' : 'archivo';
+        deleteMsg.textContent = `¿Eliminar ${type} "${itemName}"? Esta acción no se puede deshacer.`;
+        if (isDir) deleteMsg.textContent += ' Se eliminará todo su contenido.';
         deleteModal.style.display = 'flex';
-    });
+    };
 
     document.getElementById('deleteConfirm').addEventListener('click', async () => {
         deleteModal.style.display = 'none';
         if (!pendingDelete) return;
-        const r = await api('DELETE', 'delete', null, { path: pendingDelete });
+
+        const r = await api('DELETE', 'delete', null, { path: pendingDelete.path });
         if (r.ok) {
-            currentFile = null;
-            codeEditor.value = '';
-            codeEditor.disabled = true;
-            editorPH.style.display = 'flex';
-            editorFilename.textContent = '— ningún archivo —';
-            btnSave.disabled = true;
-            btnDelete.disabled = true;
-            btnRename.disabled = true;
-            editorStatus.textContent = '';
-            loadTree(currentPath);
-        } else { alert(r.data.error); }
+            // If deleted item was the open file, reset editor
+            if (currentFile && currentFile.path === pendingDelete.path) {
+                currentFile = null;
+                codeEditor.value = '';
+                codeEditor.disabled = true;
+                editorPH.style.display = 'flex';
+                editorFilename.textContent = '— ningún archivo —';
+                btnSave.disabled = true;
+                btnRename.disabled = true;
+                editorStatus.textContent = '';
+                editorSize.textContent = '';
+                showTree();
+            }
+            // If deleted item was a directory we're inside, go up
+            if (pendingDelete.isDir && currentPath.startsWith(pendingDelete.path)) {
+                const parent = pendingDelete.path.split('/').slice(0, -1).join('/');
+                loadTree(parent);
+            } else {
+                loadTree(currentPath);
+            }
+            pendingDelete = null;
+        } else {
+            alert(r.data.error);
+        }
     });
-    document.getElementById('deleteCancel').addEventListener('click', () => { deleteModal.style.display = 'none'; });
+
+    document.getElementById('deleteCancel').addEventListener('click', () => {
+        deleteModal.style.display = 'none';
+        pendingDelete = null;
+    });
 
     // ── Rename ──
     const renameModal = document.getElementById('renameModal');
@@ -258,71 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadTree(currentPath);
         } else { alert(r.data.error); }
     });
+
     document.getElementById('renameCancel').addEventListener('click', () => { renameModal.style.display = 'none'; });
     renameInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('renameConfirm').click(); });
-
-    // ── Logs (SSE live stream) ──
-    const logsContainer = document.getElementById('logsContainer');
-    let logES = null;
-    let autoScroll = true;
-
-    const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-    // Auto-scroll only when user is near bottom
-    logsContainer.addEventListener('scroll', () => {
-        const nearBottom = logsContainer.scrollHeight - logsContainer.scrollTop - logsContainer.clientHeight < 80;
-        autoScroll = nearBottom;
-    });
-
-    const appendLines = (text) => {
-        const span = document.createElement('span');
-        span.textContent = text;
-        // Colorize log levels inline
-        span.innerHTML = escHtml(text)
-            .replace(/(\[.*?ERROR.*?\])/g, '<span style="color:#f87171;">$1</span>')
-            .replace(/(\[.*?WARN.*?\])/g,  '<span style="color:#fbbf24;">$1</span>')
-            .replace(/(\[wibc\.ai\])/g,    '<span style="color:#a78bfa;">$1</span>');
-        logsContainer.appendChild(span);
-        if (autoScroll) logsContainer.scrollTop = logsContainer.scrollHeight;
-    };
-
-    const connectLogStream = () => {
-        if (logES) { logES.close(); logES = null; }
-        logsContainer.innerHTML = '<span style="color:#555;">Conectando al stream de logs...</span>\n';
-        autoScroll = true;
-
-        logES = new EventSource(`/admin-api/logs/stream?token=${encodeURIComponent(token)}`);
-
-        logES.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            if (data.type === 'clear') {
-                logsContainer.innerHTML = '';
-                const header = document.createElement('span');
-                header.style.cssText = 'color:#9d4edd;font-weight:600;';
-                header.textContent = `── ${data.file} ──\n`;
-                logsContainer.appendChild(header);
-            } else if (data.type === 'lines') {
-                appendLines(data.content);
-            }
-        };
-
-        logES.onerror = () => {
-            // SSE auto-reconnects natively; just show a subtle indicator
-            const span = document.createElement('span');
-            span.style.color = '#555';
-            span.textContent = '\n[reconectando...]\n';
-            logsContainer.appendChild(span);
-        };
-    };
-
-    // Connect when switching to logs tab
-    document.querySelectorAll('.topbar-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            if (tab.dataset.tab === 'logs' && !logES) connectLogStream();
-            // Disconnect stream when leaving logs tab to save resources
-            if (tab.dataset.tab !== 'logs' && logES) { logES.close(); logES = null; }
-        });
-    });
-
-    document.getElementById('btnRefreshLogs').addEventListener('click', connectLogStream);
 });
