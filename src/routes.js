@@ -20,6 +20,7 @@ ensureDataFiles();
 
 // ── Auth ──
 router.post('/login', (req, res) => {
+    ensureDataFiles();
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false, message: 'Faltan credenciales' });
 
@@ -33,6 +34,7 @@ router.post('/login', (req, res) => {
 });
 
 router.post('/register', (req, res) => {
+    ensureDataFiles();
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false, message: 'Faltan credenciales' });
 
