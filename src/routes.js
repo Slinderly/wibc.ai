@@ -26,9 +26,19 @@ router.post('/login', (req, res) => {
     let users = JSON.parse(fs.readFileSync(usersFile));
     let user  = users.find(u => u.username === username);
 
-    if (user) {
-        if (user.password === password) return res.json({ success: true, userId: user.id });
-        return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+    if (!user) return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    if (user.password !== password) return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+
+    return res.json({ success: true, userId: user.id });
+});
+
+router.post('/register', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ success: false, message: 'Faltan credenciales' });
+
+    let users = JSON.parse(fs.readFileSync(usersFile));
+    if (users.find(u => u.username === username)) {
+        return res.status(409).json({ success: false, message: 'Ese nombre de usuario ya está en uso' });
     }
 
     const newUserId = Date.now().toString();
