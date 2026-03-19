@@ -71,6 +71,11 @@
                         <input type="text" id="apiKey" placeholder="AIza...">
                     </div>
                     <div class="input-group">
+                        <label for="aiModel">Modelo de IA</label>
+                        <input type="text" id="aiModel" placeholder="gemini-2.5-flash">
+                        <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Déjalo vacío para usar el modelo por defecto (gemini-2.5-flash)</span>
+                    </div>
+                    <div class="input-group">
                         <label for="aiPrompt">Personalidad del Bot</label>
                         <textarea id="aiPrompt" rows="4" placeholder="Eres un asistente de ventas amable..."></textarea>
                     </div>
@@ -83,18 +88,40 @@
             </div>
         </section>
 
-        <!-- Manual Bot View -->
+        <!-- Automation View -->
         <section id="view-manual-bot" class="view-section">
-            <h2>Automatización Manual</h2>
-            <p style="margin-bottom:16px;color:var(--text-muted);font-size:0.9rem;">Respuestas automáticas por palabras clave cuando el modo IA está desactivado.</p>
-            <div class="card glassmorphism">
-                <form id="ruleForm" class="flex-form">
-                    <input type="text" id="ruleKeyword" placeholder="Palabra clave (ej: hola)" required>
-                    <input type="text" id="ruleReply" placeholder="Respuesta automática" required>
-                    <button type="submit" class="btn-primary">Añadir</button>
-                </form>
+            <h2>Automatización</h2>
+
+            <!-- Sub-tabs -->
+            <div class="auto-sub-tabs">
+                <button class="auto-tab active" data-auto="keywords">Palabras Clave</button>
+                <button class="auto-tab" data-auto="flows">Flujos de Conversación</button>
             </div>
-            <div id="rulesList" class="products-grid"></div>
+
+            <!-- Keywords Panel -->
+            <div id="auto-keywords" class="auto-panel active">
+                <p style="margin-bottom:16px;color:var(--text-muted);font-size:0.9rem;">Respuestas automáticas simples por palabras clave.</p>
+                <div class="card glassmorphism">
+                    <form id="ruleForm" class="flex-form">
+                        <input type="text" id="ruleKeyword" placeholder="Palabra clave (ej: hola)" required>
+                        <input type="text" id="ruleReply" placeholder="Respuesta automática" required>
+                        <button type="submit" class="btn-primary">Añadir</button>
+                    </form>
+                </div>
+                <div id="rulesList" class="products-grid"></div>
+            </div>
+
+            <!-- Flows Panel -->
+            <div id="auto-flows" class="auto-panel">
+                <p style="margin-bottom:16px;color:var(--text-muted);font-size:0.9rem;">Crea conversaciones ramificadas y con múltiples pasos. El bot guía al cliente por el flujo.</p>
+                <div class="section-header" style="margin-bottom:16px;">
+                    <h3 style="font-size:0.95rem;font-weight:600;">Tus flujos</h3>
+                    <button id="newFlowBtn" class="btn-icon-label">
+                        <i data-lucide="plus-circle"></i> Nuevo flujo
+                    </button>
+                </div>
+                <div id="flowsList"></div>
+            </div>
         </section>
 
         <!-- WhatsApp View -->
@@ -222,7 +249,7 @@
         </button>
         <button class="bottom-nav-item" data-view="manual-bot">
             <i data-lucide="zap"></i>
-            <span>Reglas</span>
+            <span>Flujos</span>
         </button>
         <button class="bottom-nav-item" data-view="whatsapp">
             <i data-lucide="smartphone"></i>
@@ -231,6 +258,42 @@
     </nav>
 
     <div class="toast" id="toast"></div>
+
+    <!-- ── Flow Editor Modal ── -->
+    <div id="flowModal" class="flow-modal-overlay" style="display:none;">
+        <div class="flow-modal">
+            <div class="flow-modal-header">
+                <button id="closeFlowModal" class="flow-modal-cancel">← Cancelar</button>
+                <h3 id="flowModalTitle">Nuevo Flujo</h3>
+                <button id="saveFlowBtn" class="btn-primary" style="padding:8px 16px;font-size:0.85rem;">Guardar</button>
+            </div>
+            <div class="flow-modal-body">
+                <div class="flow-meta-inputs">
+                    <div class="input-group">
+                        <label>Nombre del flujo</label>
+                        <input type="text" id="flowName" placeholder="Ej: Bienvenida al cliente">
+                    </div>
+                    <div class="input-group">
+                        <label>Palabra de activación (trigger)</label>
+                        <input type="text" id="flowTrigger" placeholder="Ej: hola, precio, info">
+                        <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;display:block;">El flujo inicia cuando alguien escribe esta palabra</span>
+                    </div>
+                </div>
+
+                <div class="flow-steps-header">
+                    <h4>Pasos del flujo</h4>
+                    <span class="flow-hint">Cada paso es un mensaje que envía el bot. Las ramas dirigen al usuario al siguiente paso según su respuesta.</span>
+                </div>
+
+                <div id="flowStepsContainer"></div>
+
+                <button id="addStepBtn" class="btn-secondary" style="width:100%;margin-top:14px;">
+                    + Agregar paso
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/dashboard.js"></script>
 </body>
 </html>

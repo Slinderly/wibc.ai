@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const userId = localStorage.getItem('wibc_userId');
     if (!userId) { window.location.href = '/'; return; }
 
-    // Init Lucide icons
     lucide.createIcons();
 
     // ── Toast ──
@@ -31,23 +30,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.bottom-nav-item').forEach(btn =>
         btn.addEventListener('click', () => switchView(btn.dataset.view)));
 
+    // ── Automation sub-tabs ──
+    document.querySelectorAll('.auto-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.auto-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auto-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(`auto-${tab.dataset.auto}`)?.classList.add('active');
+        });
+    });
+
     // ── Logout ──
     const logout = () => { localStorage.removeItem('wibc_userId'); window.location.href = '/'; };
     document.getElementById('logoutBtn').addEventListener('click', logout);
     document.getElementById('logoutBtnMobile').addEventListener('click', logout);
 
     // ── User Data ──
-    let userData = { products: [], aiConfig: { apiKey: '', prompt: '', context: '' }, botMode: 'ai', manualRules: [] };
+    let userData = {
+        products: [],
+        aiConfig: { apiKey: '', prompt: '', context: '', model: '' },
+        botMode: 'ai',
+        manualRules: [],
+        conversationFlows: []
+    };
 
     const fetchUserData = async () => {
         try {
             const res = await fetch(`/api/data/${userId}`);
             if (res.ok) {
                 userData = await res.json();
-                userData.manualRules = userData.manualRules || [];
-                userData.botMode = userData.botMode || 'ai';
-                userData.aiConfig = { ...{ apiKey:'', prompt:'', context:'' }, ...userData.aiConfig };
-                renderProducts(); renderConfigForm(); renderRules();
+                userData.manualRules       = userData.manualRules || [];
+                userData.botMode           = userData.botMode || 'ai';
+                userData.conversationFlows = userData.conversationFlows || [];
+                userData.aiConfig = { apiKey:'', prompt:'', context:'', model:'', ...userData.aiConfig };
+                renderProducts(); renderConfigForm(); renderRules(); renderFlows();
             }
         } catch (e) { console.error(e); }
     };
@@ -79,34 +95,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    window.deleteProduct = (id) => { userData.products = userData.products.filter(p => p.id !== id); renderProducts(); saveUserData(); };
+    window.deleteProduct = (id) => {
+        userData.products = userData.products.filter(p => p.id !== id);
+        renderProducts(); saveUserData();
+    };
 
     document.getElementById('productForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        userData.products.push({ id: Date.now().toString(), name: document.getElementById('prodName').value, price: document.getElementById('prodPrice').value, description: document.getElementById('prodDesc').value });
+        userData.products.push({
+            id: Date.now().toString(),
+            name: document.getElementById('prodName').value,
+            price: document.getElementById('prodPrice').value,
+            description: document.getElementById('prodDesc').value
+        });
         renderProducts(); saveUserData(); e.target.reset();
         showToast('Producto agregado', 'success');
     });
 
     // ── AI Config ──
     const renderConfigForm = () => {
-        document.getElementById('botMode').value = userData.botMode;
-        document.getElementById('apiKey').value = userData.aiConfig.apiKey || '';
-        document.getElementById('aiPrompt').value = userData.aiConfig.prompt || '';
-        document.getElementById('aiContext').value = userData.aiConfig.context || '';
+        document.getElementById('botMode').value    = userData.botMode;
+        document.getElementById('apiKey').value     = userData.aiConfig.apiKey || '';
+        document.getElementById('aiModel').value    = userData.aiConfig.model || '';
+        document.getElementById('aiPrompt').value   = userData.aiConfig.prompt || '';
+        document.getElementById('aiContext').value  = userData.aiConfig.context || '';
     };
 
     document.getElementById('aiForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        userData.botMode = document.getElementById('botMode').value;
-        userData.aiConfig = { apiKey: document.getElementById('apiKey').value, prompt: document.getElementById('aiPrompt').value, context: document.getElementById('aiContext').value };
+        userData.botMode  = document.getElementById('botMode').value;
+        userData.aiConfig = {
+            apiKey:  document.getElementById('apiKey').value,
+            model:   document.getElementById('aiModel').value.trim(),
+            prompt:  document.getElementById('aiPrompt').value,
+            context: document.getElementById('aiContext').value
+        };
         saveUserData(); showToast('Configuración guardada', 'success');
     });
 
     // ── Manual Rules ──
     const renderRules = () => {
         const list = document.getElementById('rulesList');
-        if (!userData.manualRules.length) { list.innerHTML = '<p style="color:var(--text-muted);">No tienes reglas manuales aún.</p>'; return; }
+        if (!userData.manualRules.length) {
+            list.innerHTML = '<p style="color:var(--text-muted);">No tienes reglas manuales aún.</p>'; return;
+        }
         list.innerHTML = '';
         userData.manualRules.forEach(r => {
             const div = document.createElement('div');
@@ -119,18 +151,210 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    window.deleteRule = (id) => { userData.manualRules = userData.manualRules.filter(r => r.id !== id); renderRules(); saveUserData(); };
+    window.deleteRule = (id) => {
+        userData.manualRules = userData.manualRules.filter(r => r.id !== id);
+        renderRules(); saveUserData();
+    };
 
     document.getElementById('ruleForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        userData.manualRules.push({ id: Date.now().toString(), keyword: document.getElementById('ruleKeyword').value, reply: document.getElementById('ruleReply').value });
+        userData.manualRules.push({
+            id: Date.now().toString(),
+            keyword: document.getElementById('ruleKeyword').value,
+            reply: document.getElementById('ruleReply').value
+        });
         renderRules(); saveUserData(); e.target.reset();
         showToast('Regla agregada', 'success');
     });
 
-    // ── WhatsApp Multi-Device ──
+    // ── Conversation Flows ──────────────────────────────────────────────────
 
-    // Render devices list
+    let editingFlowIdx = null;  // null = new flow, number = editing existing
+    let editingSteps   = [];    // working copy of steps in the editor
+
+    const renderFlows = () => {
+        const list = document.getElementById('flowsList');
+        const flows = userData.conversationFlows || [];
+        if (!flows.length) {
+            list.innerHTML = '<p style="color:var(--text-muted);">No tienes flujos creados aún. Crea uno para diseñar conversaciones ramificadas.</p>';
+            return;
+        }
+        list.innerHTML = '';
+        flows.forEach((flow, idx) => {
+            const div = document.createElement('div');
+            div.className = 'product-card flow-card';
+            div.innerHTML = `
+                <div class="prod-header" style="flex-wrap:wrap;gap:6px;">
+                    <h4 style="font-size:0.95rem;">${flow.name}</h4>
+                    <span class="flow-trigger-badge">${flow.trigger}</span>
+                </div>
+                <p style="color:var(--text-muted);font-size:0.85em;margin:6px 0;">
+                    ${flow.steps.length} paso${flow.steps.length !== 1 ? 's' : ''}
+                </p>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button class="btn-secondary" style="padding:7px 14px;font-size:0.82rem;flex:1;"
+                        onclick="window.openFlowEditor(${idx})">Editar</button>
+                    <button class="btn-danger" style="padding:7px 14px;font-size:0.8rem;"
+                        onclick="window.deleteFlow('${flow.id}')">Eliminar</button>
+                </div>`;
+            list.appendChild(div);
+        });
+    };
+
+    window.deleteFlow = (id) => {
+        if (!confirm('¿Eliminar este flujo? No se puede deshacer.')) return;
+        userData.conversationFlows = (userData.conversationFlows || []).filter(f => f.id !== id);
+        renderFlows(); saveUserData();
+        showToast('Flujo eliminado');
+    };
+
+    window.openFlowEditor = (idx = null) => {
+        editingFlowIdx = idx;
+        const flow = idx !== null ? (userData.conversationFlows || [])[idx] : null;
+        editingSteps = flow ? JSON.parse(JSON.stringify(flow.steps)) : [];
+
+        document.getElementById('flowName').value    = flow?.name    || '';
+        document.getElementById('flowTrigger').value = flow?.trigger || '';
+        document.getElementById('flowModalTitle').textContent = idx !== null ? 'Editar Flujo' : 'Nuevo Flujo';
+        renderFlowEditor();
+        document.getElementById('flowModal').style.display = 'flex';
+    };
+
+    document.getElementById('newFlowBtn').addEventListener('click', () => window.openFlowEditor(null));
+
+    // Render the steps inside the flow editor modal
+    const renderFlowEditor = () => {
+        const container = document.getElementById('flowStepsContainer');
+        container.innerHTML = '';
+
+        if (!editingSteps.length) {
+            container.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:24px 0;font-size:0.9rem;">
+                Sin pasos aún. Agrega el primero con el botón de abajo.
+            </p>`;
+            return;
+        }
+
+        editingSteps.forEach((step, si) => {
+            const card = document.createElement('div');
+            card.className = 'flow-step-card';
+
+            const branchesHtml = (step.branches || []).map((b, bi) => `
+                <div class="flow-branch">
+                    <span class="branch-label">Si dicen</span>
+                    <input class="branch-keywords" placeholder="palabras, separadas, por, coma" value="${escHtml(b.keywords || '')}">
+                    <span class="branch-arrow">→ ir al paso</span>
+                    <input class="branch-next" type="number" min="-1" max="${editingSteps.length - 1}" value="${b.nextStep ?? -1}">
+                    <button class="branch-del-btn" onclick="window.deleteBranch(${si},${bi})" title="Eliminar rama">×</button>
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="step-card-header">
+                    <span class="step-index-label">Paso ${si}</span>
+                    <button class="step-del-btn" onclick="window.deleteStep(${si})">× Eliminar paso</button>
+                </div>
+                <div class="input-group" style="margin-bottom:10px;">
+                    <label style="font-size:0.78rem;">Mensaje del bot</label>
+                    <textarea class="step-message" rows="3" placeholder="Escribe lo que dirá el bot en este paso...">${escHtml(step.message || '')}</textarea>
+                </div>
+                <div class="branches-section">
+                    <div class="branches-label">Ramas <span style="color:var(--text-muted);font-size:0.78rem;">(según lo que responda el usuario)</span></div>
+                    <div class="branches-list">${branchesHtml}</div>
+                    <button class="add-branch-btn" onclick="window.addBranch(${si})">+ Agregar rama</button>
+                </div>
+                <div class="step-default-row">
+                    <label>Si ninguna rama coincide → ir al paso:</label>
+                    <input type="number" class="default-next-input" min="-1" max="${editingSteps.length - 1}" value="${step.defaultNext ?? -1}">
+                    <span class="default-hint">(-1 = terminar flujo)</span>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    };
+
+    const escHtml = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    // Collect current form values into editingSteps before any mutation
+    const collectEditorState = () => {
+        document.querySelectorAll('.flow-step-card').forEach((card, si) => {
+            if (!editingSteps[si]) return;
+            editingSteps[si].message     = card.querySelector('.step-message')?.value || '';
+            editingSteps[si].defaultNext = parseInt(card.querySelector('.default-next-input')?.value ?? '-1');
+            card.querySelectorAll('.flow-branch').forEach((branchEl, bi) => {
+                if (!editingSteps[si].branches[bi]) return;
+                editingSteps[si].branches[bi].keywords  = branchEl.querySelector('.branch-keywords')?.value || '';
+                editingSteps[si].branches[bi].nextStep  = parseInt(branchEl.querySelector('.branch-next')?.value ?? '-1');
+            });
+        });
+    };
+
+    window.addFlowStep = () => {
+        collectEditorState();
+        editingSteps.push({ message: '', branches: [], defaultNext: -1 });
+        renderFlowEditor();
+    };
+
+    window.deleteStep = (si) => {
+        collectEditorState();
+        editingSteps.splice(si, 1);
+        // Fix references: decrement indices that pointed to si+, remove refs to si
+        editingSteps.forEach(step => {
+            step.branches.forEach(b => {
+                if (b.nextStep === si)       b.nextStep = -1;
+                else if (b.nextStep > si)    b.nextStep -= 1;
+            });
+            if (step.defaultNext === si)     step.defaultNext = -1;
+            else if (step.defaultNext > si)  step.defaultNext -= 1;
+        });
+        renderFlowEditor();
+    };
+
+    window.addBranch = (si) => {
+        collectEditorState();
+        editingSteps[si].branches.push({ keywords: '', nextStep: -1 });
+        renderFlowEditor();
+    };
+
+    window.deleteBranch = (si, bi) => {
+        collectEditorState();
+        editingSteps[si].branches.splice(bi, 1);
+        renderFlowEditor();
+    };
+
+    document.getElementById('addStepBtn').addEventListener('click', window.addFlowStep);
+
+    document.getElementById('saveFlowBtn').addEventListener('click', () => {
+        collectEditorState();
+        const name    = document.getElementById('flowName').value.trim();
+        const trigger = document.getElementById('flowTrigger').value.trim();
+        if (!name)    { alert('El flujo necesita un nombre.'); return; }
+        if (!trigger) { alert('El flujo necesita una palabra de activación.'); return; }
+
+        if (!userData.conversationFlows) userData.conversationFlows = [];
+
+        if (editingFlowIdx !== null) {
+            userData.conversationFlows[editingFlowIdx] = {
+                ...userData.conversationFlows[editingFlowIdx],
+                name, trigger, steps: editingSteps
+            };
+        } else {
+            userData.conversationFlows.push({
+                id: 'flow_' + Date.now(),
+                name, trigger, steps: editingSteps
+            });
+        }
+
+        document.getElementById('flowModal').style.display = 'none';
+        renderFlows(); saveUserData();
+        showToast('Flujo guardado', 'success');
+    });
+
+    document.getElementById('closeFlowModal').addEventListener('click', () => {
+        document.getElementById('flowModal').style.display = 'none';
+    });
+
+    // ── WhatsApp Multi-Device ──────────────────────────────────────────────
+
     const renderDevices = (sessions) => {
         const list = document.getElementById('devicesList');
         if (!sessions.length) {
@@ -144,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const connAt = s.device?.connectedAt
                 ? new Date(s.device.connectedAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
                 : '—';
-
             const dotClass = s.status === 'connected' ? 'connected' : s.status === 'connecting' ? 'connecting' : 'disconnected';
 
             const row = document.createElement('div');
@@ -163,10 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchDevices = async () => {
         try {
             const res = await fetch(`/api/devices/${userId}`);
-            if (res.ok) {
-                const data = await res.json();
-                renderDevices(data.sessions || []);
-            }
+            if (res.ok) { const data = await res.json(); renderDevices(data.sessions || []); }
         } catch (e) { console.error(e); }
     };
 
@@ -180,23 +400,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Add Device Panel ──
     const addDeviceCard = document.getElementById('addDeviceCard');
     const addDeviceBtn  = document.getElementById('addDeviceBtn');
-    const closeAddBtn   = document.getElementById('closeAddDevice');
 
     addDeviceBtn.addEventListener('click', () => {
         addDeviceCard.style.display = 'block';
         addDeviceBtn.disabled = true;
         lucide.createIcons();
-        resetQRPanel();
-        resetPhonePanel();
+        resetQRPanel(); resetPhonePanel();
     });
 
-    closeAddBtn.addEventListener('click', () => {
+    document.getElementById('closeAddDevice').addEventListener('click', () => {
         addDeviceCard.style.display = 'none';
         addDeviceBtn.disabled = false;
         clearAllPolling();
     });
 
-    // ── Tab switching inside add panel ──
     document.querySelectorAll('.connect-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.connect-tab').forEach(t => t.classList.remove('active'));
@@ -207,10 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── QR Method ──
-    let qrPollInterval = null;
-    let qrCountdownInterval = null;
-    let qrRendered = false;
-    let activeQRSessionId = null;
+    let qrPollInterval = null, qrCountdownInterval = null, qrRendered = false, activeQRSessionId = null;
     const QR_TIMEOUT_MS = 60000;
 
     const clearAllPolling = () => {
@@ -231,8 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const onQRConnected = () => {
         clearInterval(qrPollInterval); clearInterval(qrCountdownInterval);
-        addDeviceCard.style.display = 'none';
-        addDeviceBtn.disabled = false;
+        addDeviceCard.style.display = 'none'; addDeviceBtn.disabled = false;
         showToast('WhatsApp vinculado correctamente', 'success');
         setTimeout(fetchDevices, 1000);
     };
@@ -256,16 +469,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkQR = async () => {
         if (!activeQRSessionId) return;
         try {
-            const res = await fetch(`/api/qr/${userId}/${activeQRSessionId}`);
+            const res  = await fetch(`/api/qr/${userId}/${activeQRSessionId}`);
             const data = await res.json();
             const qrContainer = document.getElementById('qrcode');
-
             if (data.connected || data.status === 'connected') { onQRConnected(); return; }
             if (data.status === 'timeout') {
                 clearInterval(qrPollInterval); clearInterval(qrCountdownInterval);
                 document.getElementById('qrWrapper').style.display = 'none';
-                document.getElementById('qrTimeoutMsg').style.display = 'block';
-                return;
+                document.getElementById('qrTimeoutMsg').style.display = 'block'; return;
             }
             if (data.qr) {
                 document.getElementById('qrWrapper').style.display = 'flex';
@@ -287,12 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true; btn.textContent = 'Iniciando...';
         document.getElementById('qrTimeoutMsg').style.display = 'none';
         qrRendered = false;
-
         try {
-            const res = await fetch('/api/init-bot', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId })
-            });
+            const res  = await fetch('/api/init-bot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) });
             const data = await res.json();
             activeQRSessionId = data.sessionId;
             btn.style.display = 'none';
@@ -300,25 +507,21 @@ document.addEventListener('DOMContentLoaded', () => {
             checkQR();
             qrPollInterval = setInterval(checkQR, 2000);
             setTimeout(() => clearInterval(qrPollInterval), QR_TIMEOUT_MS + 5000);
-        } catch {
-            btn.disabled = false; btn.textContent = 'Generar Código QR';
-        }
+        } catch { btn.disabled = false; btn.textContent = 'Generar Código QR'; }
     });
 
     document.getElementById('retryQrBtn').addEventListener('click', resetQRPanel);
 
     // ── Phone Number Method ──
-    let phonePollInterval = null;
-    let phoneCountdown = null;
-    let activePhoneSessionId = null;
-    const PHONE_TIMEOUT_MS = 160000; // WhatsApp permite ~160 segundos para ingresar el código
+    let phonePollInterval = null, phoneCountdown = null, activePhoneSessionId = null;
+    const PHONE_TIMEOUT_MS = 160000;
 
     const resetPhonePanel = () => {
         clearInterval(phonePollInterval); clearInterval(phoneCountdown);
         activePhoneSessionId = null;
         document.getElementById('pairingCodeDisplay').style.display = 'none';
-        document.getElementById('phoneTimeoutMsg').style.display = 'none';
-        document.getElementById('pairingError').style.display = 'none';
+        document.getElementById('phoneTimeoutMsg').style.display   = 'none';
+        document.getElementById('pairingError').style.display      = 'none';
         document.getElementById('phoneNumber').value = '';
         document.getElementById('countryCode').selectedIndex = 0;
         const btn = document.getElementById('requestCodeBtn');
@@ -327,8 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const onPhoneConnected = () => {
         clearInterval(phonePollInterval); clearInterval(phoneCountdown);
-        addDeviceCard.style.display = 'none';
-        addDeviceBtn.disabled = false;
+        addDeviceCard.style.display = 'none'; addDeviceBtn.disabled = false;
         showToast('WhatsApp vinculado correctamente', 'success');
         setTimeout(fetchDevices, 1000);
     };
@@ -347,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkPhoneConnection = async () => {
         if (!activePhoneSessionId) return;
         try {
-            const res = await fetch(`/api/qr/${userId}/${activePhoneSessionId}`);
+            const res  = await fetch(`/api/qr/${userId}/${activePhoneSessionId}`);
             const data = await res.json();
             if (data.connected || data.status === 'connected') { onPhoneConnected(); return; }
             if (data.status === 'timeout') {
@@ -359,11 +561,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.getElementById('requestCodeBtn').addEventListener('click', async () => {
-        const btn = document.getElementById('requestCodeBtn');
+        const btn         = document.getElementById('requestCodeBtn');
         const countryCode = document.getElementById('countryCode').value;
         const localNumber = document.getElementById('phoneNumber').value.replace(/\D/g, '');
-        const phone = countryCode + localNumber;
-        const errorEl = document.getElementById('pairingError');
+        const phone       = countryCode + localNumber;
+        const errorEl     = document.getElementById('pairingError');
 
         if (!localNumber || localNumber.length < 5) {
             errorEl.textContent = 'Ingresa un número de teléfono válido (sin código de país).';
@@ -372,14 +574,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         errorEl.style.display = 'none';
         document.getElementById('pairingCodeDisplay').style.display = 'none';
-        document.getElementById('phoneTimeoutMsg').style.display = 'none';
+        document.getElementById('phoneTimeoutMsg').style.display    = 'none';
         btn.disabled = true; btn.textContent = 'Solicitando...';
 
         try {
-            const res = await fetch('/api/request-pairing-code', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, phoneNumber: phone })
-            });
+            const res  = await fetch('/api/request-pairing-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, phoneNumber: phone }) });
             const data = await res.json();
 
             if (data.success) {

@@ -573,3 +573,271 @@ h2 { margin-bottom: 20px; font-weight: 600; font-size: 1.3rem; }
     color: var(--success);
     font-weight: 700;
 }
+
+/* ── Automation Sub-tabs ──────────────────────────────────────── */
+.auto-sub-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 4px;
+}
+.auto-tab {
+    flex: 1;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.auto-tab.active {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+}
+.auto-panel { display: none; }
+.auto-panel.active { display: block; }
+
+/* ── Flow Card ────────────────────────────────────────────────── */
+.flow-card {
+    display: flex;
+    flex-direction: column;
+}
+.flow-trigger-badge {
+    background: rgba(107, 76, 230, 0.25);
+    color: var(--primary-light, #a78bfa);
+    border: 1px solid rgba(107, 76, 230, 0.4);
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ── Flow Editor Modal ────────────────────────────────────────── */
+.flow-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
+    overflow-y: auto;
+}
+.flow-modal {
+    background: var(--card-bg, #1a1a2e);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 0 0 16px 16px;
+    width: 100%;
+    max-width: 720px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+@media (min-width: 768px) {
+    .flow-modal-overlay { align-items: center; padding: 24px 16px; }
+    .flow-modal { min-height: unset; border-radius: 16px; }
+}
+.flow-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    position: sticky;
+    top: 0;
+    background: var(--card-bg, #1a1a2e);
+    z-index: 10;
+    border-radius: 16px 16px 0 0;
+}
+.flow-modal-header h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+    margin: 0;
+}
+.flow-modal-cancel {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 6px 0;
+    white-space: nowrap;
+}
+.flow-modal-cancel:hover { color: var(--text-primary, #fff); }
+.flow-modal-body {
+    padding: 20px 18px;
+    flex: 1;
+    overflow-y: auto;
+}
+.flow-meta-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+@media (max-width: 520px) {
+    .flow-meta-inputs { grid-template-columns: 1fr; }
+}
+.flow-steps-header {
+    margin-bottom: 12px;
+}
+.flow-steps-header h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.flow-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    display: block;
+}
+
+/* ── Flow Step Card ───────────────────────────────────────────── */
+.flow-step-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+.step-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.step-index-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--primary-light, #a78bfa);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.step-del-btn {
+    background: none;
+    border: 1px solid rgba(239,68,68,0.35);
+    color: #f87171;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.step-del-btn:hover { background: rgba(239,68,68,0.15); }
+
+/* ── Branches ─────────────────────────────────────────────────── */
+.branches-section { margin-bottom: 12px; }
+.branches-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.branches-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.flow-branch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+.branch-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.branch-keywords {
+    flex: 1;
+    min-width: 100px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: inherit;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+}
+.branch-arrow {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.branch-next {
+    width: 56px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: inherit;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+    text-align: center;
+}
+.branch-del-btn {
+    background: none;
+    border: none;
+    color: #f87171;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 4px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.add-branch-btn {
+    background: none;
+    border: 1px dashed rgba(255,255,255,0.2);
+    color: var(--text-muted);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+}
+.add-branch-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary-light, #a78bfa);
+}
+
+/* ── Default Next Row ─────────────────────────────────────────── */
+.step-default-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.step-default-row label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.default-next-input {
+    width: 60px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: inherit;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+    text-align: center;
+}
+.default-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+

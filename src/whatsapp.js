@@ -89,7 +89,7 @@ const buildSocket = async (userId, sessionId) => {
             msg.message.extendedTextMessage?.text || '';
         if (!text) return;
         try {
-            const reply = await generateAIResponse(userId, text);
+            const reply = await generateAIResponse(userId, text, msg.key.remoteJid);
             if (reply) await sock.sendMessage(msg.key.remoteJid, { text: reply });
         } catch (e) { console.error('[wibc.ai] AI error:', e.message); }
     });
