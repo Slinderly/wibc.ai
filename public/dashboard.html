@@ -21,14 +21,17 @@
             <li data-view="ai-config">
                 <i data-lucide="brain"></i><span>Inteligencia Artificial</span>
             </li>
-            <li data-view="manual-bot">
-                <i data-lucide="zap"></i><span>Automatización</span>
+            <li data-view="flows">
+                <i data-lucide="git-branch"></i><span>Automatización</span>
             </li>
             <li data-view="orders">
                 <i data-lucide="clipboard-list"></i><span>Pedidos</span>
             </li>
             <li data-view="whatsapp">
                 <i data-lucide="smartphone"></i><span>WhatsApp</span>
+            </li>
+            <li data-view="profile">
+                <i data-lucide="user-circle"></i><span>Perfil</span>
             </li>
         </ul>
         <button id="logoutBtn" class="btn-outline">Cerrar Sesión</button>
@@ -61,7 +64,6 @@
         <section id="view-ai-config" class="view-section">
             <h2>Configuración de IA</h2>
 
-            <!-- Card 1: Credentials -->
             <div class="card glassmorphism" style="margin-bottom:20px;">
                 <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">1 — Conexión con Gemini</h3>
                 <form id="aiCredForm">
@@ -69,7 +71,7 @@
                         <label for="botMode">Modo del Bot</label>
                         <select id="botMode">
                             <option value="ai">Inteligencia Artificial</option>
-                            <option value="manual">Solo Reglas Manuales</option>
+                            <option value="manual">Solo Flujos Manuales</option>
                         </select>
                     </div>
                     <div class="input-group">
@@ -85,11 +87,9 @@
                 </form>
             </div>
 
-            <!-- Card 2: Personality -->
             <div class="card glassmorphism">
                 <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:14px;color:var(--text-muted);">2 — Personalidad del Bot</h3>
 
-                <!-- Mode tabs -->
                 <div class="prompt-mode-tabs">
                     <button type="button" class="prompt-mode-tab active" data-mode="wizard">
                         <i data-lucide="list-checks" style="width:14px;height:14px;"></i> Modo Fácil
@@ -99,7 +99,6 @@
                     </button>
                 </div>
 
-                <!-- ── WIZARD PANEL ── -->
                 <div id="panel-wizard" class="prompt-mode-panel">
                     <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:18px;">Responde las preguntas y el bot se configura automáticamente.</p>
                     <form id="wizardForm">
@@ -159,13 +158,10 @@
                                 </label>
                             </div>
                         </div>
-
-                        <!-- Generated prompt preview -->
                         <div class="wizard-preview-wrap" id="wizardPreviewWrap" style="display:none;">
                             <div class="wizard-preview-label">Prompt generado (puedes editarlo):</div>
                             <textarea id="wizardPromptPreview" rows="7" style="font-size:0.82rem;"></textarea>
                         </div>
-
                         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
                             <button type="button" id="wizardPreviewBtn" class="btn-secondary" style="flex:1;">Vista previa del prompt</button>
                             <button type="submit" class="btn-primary" style="flex:1;">Guardar configuración</button>
@@ -173,7 +169,6 @@
                     </form>
                 </div>
 
-                <!-- ── ADVANCED PANEL ── -->
                 <div id="panel-advanced" class="prompt-mode-panel" style="display:none;">
                     <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;">Control total. La IA lee todos los productos con nombre, precio y descripción exactos.</p>
                     <form id="aiPromptForm">
@@ -183,12 +178,12 @@
                         </div>
                         <div class="input-group">
                             <label for="aiOrderInstructions">Instrucciones para guardar pedidos</label>
-                            <textarea id="aiOrderInstructions" rows="3" placeholder="Ej: Siempre pide nombre completo, dirección exacta, barrio y referencia. Confirma el método de pago (efectivo o transferencia) antes de registrar el pedido."></textarea>
+                            <textarea id="aiOrderInstructions" rows="3" placeholder="Ej: Siempre pide nombre completo, dirección exacta, barrio y referencia..."></textarea>
                             <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Dile a la IA exactamente qué datos recolectar al tomar un pedido.</span>
                         </div>
                         <div class="input-group">
                             <label for="aiContext">Restricciones / Instrucciones extra</label>
-                            <textarea id="aiContext" rows="3" placeholder="No ofrezcas descuentos mayores al 10%. No atiendas fuera del horario establecido..."></textarea>
+                            <textarea id="aiContext" rows="3" placeholder="No ofrezcas descuentos mayores al 10%..."></textarea>
                         </div>
                         <button type="submit" class="btn-primary">Guardar personalidad</button>
                     </form>
@@ -196,40 +191,18 @@
             </div>
         </section>
 
-        <!-- Automation View -->
-        <section id="view-manual-bot" class="view-section">
+        <!-- Flows View -->
+        <section id="view-flows" class="view-section">
             <h2>Automatización</h2>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:20px;">Crea flujos de conversación inteligentes: muestra productos, recolecta datos, registra pedidos y más.</p>
 
-            <!-- Sub-tabs -->
-            <div class="auto-sub-tabs">
-                <button class="auto-tab active" data-auto="keywords">Palabras Clave</button>
-                <button class="auto-tab" data-auto="flows">Flujos de Conversación</button>
+            <div class="section-header" style="margin-bottom:16px;">
+                <h3 style="font-size:0.95rem;font-weight:600;">Tus flujos</h3>
+                <button id="newFlowBtn" class="btn-icon-label">
+                    <i data-lucide="plus-circle"></i> Nuevo flujo
+                </button>
             </div>
-
-            <!-- Keywords Panel -->
-            <div id="auto-keywords" class="auto-panel active">
-                <p style="margin-bottom:16px;color:var(--text-muted);font-size:0.9rem;">Respuestas automáticas simples por palabras clave.</p>
-                <div class="card glassmorphism">
-                    <form id="ruleForm" class="flex-form">
-                        <input type="text" id="ruleKeyword" placeholder="Palabra clave (ej: hola)" required>
-                        <input type="text" id="ruleReply" placeholder="Respuesta automática" required>
-                        <button type="submit" class="btn-primary">Añadir</button>
-                    </form>
-                </div>
-                <div id="rulesList" class="products-grid"></div>
-            </div>
-
-            <!-- Flows Panel -->
-            <div id="auto-flows" class="auto-panel">
-                <p style="margin-bottom:16px;color:var(--text-muted);font-size:0.9rem;">Crea conversaciones ramificadas y con múltiples pasos. El bot guía al cliente por el flujo.</p>
-                <div class="section-header" style="margin-bottom:16px;">
-                    <h3 style="font-size:0.95rem;font-weight:600;">Tus flujos</h3>
-                    <button id="newFlowBtn" class="btn-icon-label">
-                        <i data-lucide="plus-circle"></i> Nuevo flujo
-                    </button>
-                </div>
-                <div id="flowsList"></div>
-            </div>
+            <div id="flowsList"></div>
         </section>
 
         <!-- Orders View -->
@@ -256,7 +229,6 @@
         <section id="view-whatsapp" class="view-section">
             <h2>WhatsApp</h2>
 
-            <!-- Devices list -->
             <div class="card glassmorphism" id="devicesCard">
                 <div class="section-header">
                     <h3>Dispositivos vinculados</h3>
@@ -269,7 +241,6 @@
                 </div>
             </div>
 
-            <!-- Add device panel (hidden by default) -->
             <div class="card glassmorphism" id="addDeviceCard" style="display:none;">
                 <div class="section-header">
                     <h3>Vincular nuevo dispositivo</h3>
@@ -283,13 +254,11 @@
                     <button class="connect-tab" data-panel="phone-panel">Número de Celular</button>
                 </div>
 
-                <!-- QR Panel -->
                 <div id="qr-panel" class="connect-panel active">
                     <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:14px;">
                         Abre WhatsApp &rsaquo; Dispositivos vinculados &rsaquo; Vincular dispositivo.
                     </p>
                     <button id="startBotBtn" class="btn-primary" style="margin-bottom:16px;">Generar Código QR</button>
-
                     <div class="qr-wrapper" id="qrWrapper" style="display:none;">
                         <div class="qr-box" id="qrBoxContainer">
                             <div id="qrcode"></div>
@@ -300,14 +269,12 @@
                             <span class="timer-label" id="timerLabel">30s</span>
                         </div>
                     </div>
-
                     <div id="qrTimeoutMsg" style="display:none;text-align:center;padding:12px 0;">
                         <p style="color:var(--text-muted);margin-bottom:12px;">Tiempo agotado. No se escaneó el código.</p>
                         <button id="retryQrBtn" class="btn-secondary">Intentar de nuevo</button>
                     </div>
                 </div>
 
-                <!-- Phone Panel -->
                 <div id="phone-panel" class="connect-panel">
                     <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:16px;">
                         Selecciona tu país e ingresa tu número sin el código de país. Recibirás un código de 8 dígitos en WhatsApp.
@@ -343,9 +310,7 @@
                         </div>
                         <button id="requestCodeBtn" class="btn-primary">Obtener Código</button>
                     </div>
-
                     <div id="pairingError" class="error-msg" style="display:none;"></div>
-
                     <div class="pairing-code-display" id="pairingCodeDisplay">
                         <p>Ingresa este código en WhatsApp:</p>
                         <div class="pairing-code" id="pairingCode">---- ----</div>
@@ -354,12 +319,62 @@
                         </div>
                         <p id="phoneTimer" style="color:var(--text-muted);font-size:0.8rem;margin-top:8px;"></p>
                     </div>
-
                     <div id="phoneTimeoutMsg" style="display:none;text-align:center;padding:12px 0;">
                         <p style="color:var(--text-muted);margin-bottom:12px;">El código expiró.</p>
                         <button id="retryPhoneBtn" class="btn-secondary">Intentar de nuevo</button>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- Profile View -->
+        <section id="view-profile" class="view-section">
+            <h2>Mi Perfil</h2>
+
+            <div class="card glassmorphism profile-info-card" style="margin-bottom:20px;">
+                <div class="profile-avatar-row">
+                    <div class="profile-avatar-circle" id="profileAvatarCircle">U</div>
+                    <div>
+                        <div class="profile-username-display" id="profileUsernameDisplay">Cargando...</div>
+                        <div class="profile-id-display" id="profileIdDisplay"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card glassmorphism" style="margin-bottom:20px;">
+                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">Cambiar nombre de usuario</h3>
+                <form id="changeUsernameForm">
+                    <div class="input-group">
+                        <label>Nuevo nombre de usuario</label>
+                        <input type="text" id="newUsername" placeholder="nuevo-usuario" autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label>Contraseña actual (para verificar)</label>
+                        <input type="password" id="passForUsername" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn-primary">Cambiar nombre</button>
+                    <div id="usernameMsg" style="margin-top:10px;font-size:0.85rem;text-align:center;"></div>
+                </form>
+            </div>
+
+            <div class="card glassmorphism">
+                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">Cambiar contraseña</h3>
+                <form id="changePasswordForm">
+                    <div class="input-group">
+                        <label>Contraseña actual</label>
+                        <input type="password" id="currentPass" placeholder="••••••••">
+                    </div>
+                    <div class="input-group">
+                        <label>Nueva contraseña</label>
+                        <input type="password" id="newPass" placeholder="••••••••">
+                    </div>
+                    <div class="input-group">
+                        <label>Confirmar nueva contraseña</label>
+                        <input type="password" id="confirmPass" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn-primary">Cambiar contraseña</button>
+                    <div id="passwordMsg" style="margin-top:10px;font-size:0.85rem;text-align:center;"></div>
+                </form>
             </div>
         </section>
 
@@ -375,8 +390,8 @@
             <i data-lucide="brain"></i>
             <span>IA</span>
         </button>
-        <button class="bottom-nav-item" data-view="manual-bot">
-            <i data-lucide="zap"></i>
+        <button class="bottom-nav-item" data-view="flows">
+            <i data-lucide="git-branch"></i>
             <span>Flujos</span>
         </button>
         <button class="bottom-nav-item" data-view="orders">
@@ -385,7 +400,11 @@
         </button>
         <button class="bottom-nav-item" data-view="whatsapp">
             <i data-lucide="smartphone"></i>
-            <span>WhatsApp</span>
+            <span>WApp</span>
+        </button>
+        <button class="bottom-nav-item" data-view="profile">
+            <i data-lucide="user-circle"></i>
+            <span>Perfil</span>
         </button>
     </nav>
 
@@ -400,21 +419,29 @@
                 <button id="saveFlowBtn" class="btn-primary" style="padding:8px 16px;font-size:0.85rem;">Guardar</button>
             </div>
             <div class="flow-modal-body">
+                <!-- Flow meta -->
                 <div class="flow-meta-inputs">
                     <div class="input-group">
                         <label>Nombre del flujo</label>
                         <input type="text" id="flowName" placeholder="Ej: Bienvenida al cliente">
                     </div>
                     <div class="input-group">
-                        <label>Palabra de activación (trigger)</label>
+                        <label>Tipo de activación</label>
+                        <select id="flowTriggerType">
+                            <option value="any_first_message">Primer mensaje (cualquier contacto nuevo)</option>
+                            <option value="keyword">Palabra clave</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="flowTriggerKeywordRow" style="display:none;grid-column:1/-1;">
+                        <label>Palabra de activación</label>
                         <input type="text" id="flowTrigger" placeholder="Ej: hola, precio, info">
-                        <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;display:block;">El flujo inicia cuando alguien escribe esta palabra</span>
+                        <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;display:block;">El flujo inicia cuando el mensaje contiene esta palabra</span>
                     </div>
                 </div>
 
                 <div class="flow-steps-header">
                     <h4>Pasos del flujo</h4>
-                    <span class="flow-hint">Cada paso es un mensaje que envía el bot. Las ramas dirigen al usuario al siguiente paso según su respuesta.</span>
+                    <span class="flow-hint">Cada paso define lo que hace el bot. Los pasos se encadenan según la configuración de cada uno.</span>
                 </div>
 
                 <div id="flowStepsContainer"></div>

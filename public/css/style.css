@@ -1169,3 +1169,160 @@ h2 { margin-bottom: 20px; font-weight: 600; font-size: 1.3rem; }
     justify-content: center;
 }
 
+
+/* ── Flow: step type selector ─────────────────────────────────── */
+.step-type-select {
+    background: rgba(157,78,221,0.12);
+    border: 1px solid rgba(157,78,221,0.35);
+    border-radius: 8px;
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+}
+.step-type-select:focus { outline: none; border-color: var(--primary); }
+.step-type-select option { background: #1e1535; color: var(--text); font-weight: 400; }
+
+.step-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.step-card-header .step-index-label { flex-shrink: 0; }
+.step-card-header .step-del-btn { flex-shrink: 0; margin-left: auto; }
+
+/* ── Step type hint ───────────────────────────────────────────── */
+.step-type-hint {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid var(--primary);
+    border-radius: 0 6px 6px 0;
+    padding: 5px 10px;
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+/* ── Options section ──────────────────────────────────────────── */
+.options-section { margin-bottom: 12px; }
+.options-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+
+.option-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 8px 10px;
+    flex-wrap: wrap;
+}
+.option-num {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--primary);
+    white-space: nowrap;
+    min-width: 18px;
+}
+.option-label-input {
+    flex: 1;
+    min-width: 100px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: inherit;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+}
+.option-arrow {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.option-next-input {
+    width: 56px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: inherit;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+/* ── Flow field selector ──────────────────────────────────────── */
+.step-field-select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.88rem;
+    padding: 9px 12px;
+}
+
+/* ── Flow empty state ─────────────────────────────────────────── */
+.flow-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+/* ── Flow trigger grid ────────────────────────────────────────── */
+.flow-meta-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+@media (max-width: 520px) { .flow-meta-inputs { grid-template-columns: 1fr; } }
+
+/* ── Profile ──────────────────────────────────────────────────── */
+.profile-info-card { padding: 24px 22px; }
+
+.profile-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.profile-avatar-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(157,78,221,0.4);
+}
+
+.profile-username-display {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.profile-id-display {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+/* ── Bottom nav 6-item adjustment ────────────────────────────── */
+@media screen and (max-width: 768px) {
+    .bottom-nav-item { font-size: 0.6rem; }
+    .bottom-nav-item svg { width: 18px; height: 18px; }
+}

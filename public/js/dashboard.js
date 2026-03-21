@@ -23,22 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
             l.classList.toggle('active', l.dataset.view === viewName));
         document.querySelectorAll('.bottom-nav-item').forEach(b =>
             b.classList.toggle('active', b.dataset.view === viewName));
+        if (viewName === 'profile') loadProfile();
+        if (viewName === 'flows') renderFlows();
     };
 
     document.querySelectorAll('.nav-links li').forEach(li =>
         li.addEventListener('click', () => switchView(li.dataset.view)));
     document.querySelectorAll('.bottom-nav-item').forEach(btn =>
         btn.addEventListener('click', () => switchView(btn.dataset.view)));
-
-    // ── Automation sub-tabs ──
-    document.querySelectorAll('.auto-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.auto-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.auto-panel').forEach(p => p.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById(`auto-${tab.dataset.auto}`)?.classList.add('active');
-        });
-    });
 
     // ── Logout ──
     const logout = () => { localStorage.removeItem('wibc_userId'); window.location.href = '/'; };
@@ -63,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 userData.botMode           = userData.botMode || 'ai';
                 userData.conversationFlows = userData.conversationFlows || [];
                 userData.aiConfig = { apiKey:'', prompt:'', context:'', model:'', ...userData.aiConfig };
-                renderProducts(); renderConfigForm(); renderRules(); renderFlows();
+                renderProducts(); renderConfigForm(); renderFlows();
             }
         } catch (e) { console.error(e); }
     };
@@ -88,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = document.createElement('div');
             div.className = 'product-card';
             div.innerHTML = `
-                <div class="prod-header"><h3>${p.name}</h3><span class="prod-price">$${p.price}</span></div>
+                <div class="prod-header"><h3>${p.name}</h3><span class="prod-price">${p.price}</span></div>
                 <p style="color:var(--text-muted);font-size:0.88em;">${p.description}</p>
                 <button class="btn-danger" style="margin-top:auto;" onclick="window.deleteProduct('${p.id}')">Eliminar</button>`;
             list.appendChild(div);
@@ -117,22 +109,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const botName  = w.botName      || 'el asistente virtual';
         const bizName  = w.businessName || 'el negocio';
         const persona  = w.personality  || 'amable y profesional';
-
         let p = `Eres ${botName}, el asistente virtual de ${bizName}. Tu personalidad es ${persona}. Tu objetivo es atender a los clientes, presentar los productos disponibles y tomar pedidos de forma clara y ordenada.\n\n`;
-
         if (w.doesDelivery) {
             const data = w.deliveryData || 'nombre completo, dirección, referencia';
             p += `Realizamos envíos a domicilio. Para coordinar cualquier pedido con envío, solicita siempre al cliente: ${data}.\n`;
         } else {
             p += `Los pedidos son únicamente para retirar en tienda, no realizamos envíos a domicilio.\n`;
         }
-
         if (w.location)      p += `\nNuestra ubicación: ${w.location}.`;
         if (w.businessPhone) p += `\nTeléfono directo del negocio: ${w.businessPhone}.`;
         if (w.hoursFrom && w.hoursTo) p += `\nHorario de atención: de ${w.hoursFrom} a ${w.hoursTo}.`;
         if (w.currency)      p += `\nTodos los precios están expresados en ${w.currency}.`;
         if (w.askClientPhone) p += `\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.`;
-
         return p.trim();
     };
 
@@ -143,10 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('aiContext').value = userData.aiConfig.context || '';
         document.getElementById('aiPrompt').value  = userData.aiConfig.prompt  || '';
         document.getElementById('aiOrderInstructions').value = userData.aiConfig.orderInstructions || '';
-
         const mode = userData.aiConfig.promptMode || 'wizard';
         setPromptMode(mode);
-
         const w = userData.aiConfig.wizardData || {};
         document.getElementById('wBotName').value       = w.botName       || '';
         document.getElementById('wBusinessName').value  = w.businessName  || '';
@@ -162,7 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('wDeliveryData').value  = w.deliveryData  || '';
     };
 
-    // ── Mode tabs ──
     const setPromptMode = (mode) => {
         document.querySelectorAll('.prompt-mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
         document.getElementById('panel-wizard').style.display   = mode === 'wizard'   ? 'block' : 'none';
@@ -171,71 +156,56 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     };
 
-    document.querySelectorAll('.prompt-mode-tab').forEach(tab => {
-        tab.addEventListener('click', () => setPromptMode(tab.dataset.mode));
-    });
+    document.querySelectorAll('.prompt-mode-tab').forEach(tab =>
+        tab.addEventListener('click', () => setPromptMode(tab.dataset.mode)));
 
-    // Delivery toggle
     document.getElementById('wDoesDelivery').addEventListener('change', (e) => {
         document.getElementById('wDeliveryRow').style.display = e.target.checked ? 'block' : 'none';
     });
 
-    // Wizard preview
     const getWizardData = () => ({
-        botName:      document.getElementById('wBotName').value.trim(),
-        businessName: document.getElementById('wBusinessName').value.trim(),
-        personality:  document.getElementById('wPersonality').value.trim(),
-        location:     document.getElementById('wLocation').value.trim(),
-        businessPhone:document.getElementById('wBusinessPhone').value.trim(),
-        hoursFrom:    document.getElementById('wHoursFrom').value.trim(),
-        hoursTo:      document.getElementById('wHoursTo').value.trim(),
-        currency:     document.getElementById('wCurrency').value.trim(),
-        doesDelivery: document.getElementById('wDoesDelivery').checked,
-        deliveryData: document.getElementById('wDeliveryData').value.trim(),
-        askClientPhone: document.getElementById('wAskClientPhone').checked,
+        botName:       document.getElementById('wBotName').value.trim(),
+        businessName:  document.getElementById('wBusinessName').value.trim(),
+        personality:   document.getElementById('wPersonality').value.trim(),
+        location:      document.getElementById('wLocation').value.trim(),
+        businessPhone: document.getElementById('wBusinessPhone').value.trim(),
+        hoursFrom:     document.getElementById('wHoursFrom').value.trim(),
+        hoursTo:       document.getElementById('wHoursTo').value.trim(),
+        currency:      document.getElementById('wCurrency').value.trim(),
+        doesDelivery:  document.getElementById('wDoesDelivery').checked,
+        deliveryData:  document.getElementById('wDeliveryData').value.trim(),
+        askClientPhone:document.getElementById('wAskClientPhone').checked,
     });
 
     document.getElementById('wizardPreviewBtn').addEventListener('click', () => {
-        const w = getWizardData();
-        const prompt = buildWizardPrompt(w);
-        const wrap = document.getElementById('wizardPreviewWrap');
+        const prompt = buildWizardPrompt(getWizardData());
         document.getElementById('wizardPromptPreview').value = prompt;
-        wrap.style.display = 'block';
+        document.getElementById('wizardPreviewWrap').style.display = 'block';
     });
 
-    // Wizard save
     document.getElementById('wizardForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const w = getWizardData();
-        const prompt = document.getElementById('wizardPromptPreview').style.display !== 'none'
+        const prompt = document.getElementById('wizardPreviewWrap').style.display !== 'none'
             ? document.getElementById('wizardPromptPreview').value
             : buildWizardPrompt(w);
-        userData.aiConfig = {
-            ...userData.aiConfig,
-            promptMode:  'wizard',
-            wizardData:  w,
-            prompt,
-        };
+        userData.aiConfig = { ...userData.aiConfig, promptMode: 'wizard', wizardData: w, prompt };
         saveUserData(); showToast('Configuración guardada', 'success');
     });
 
-    // Form 1: credentials
     document.getElementById('aiCredForm').addEventListener('submit', (e) => {
         e.preventDefault();
         userData.botMode = document.getElementById('botMode').value;
-        userData.aiConfig = {
-            ...userData.aiConfig,
+        userData.aiConfig = { ...userData.aiConfig,
             apiKey: document.getElementById('apiKey').value.trim(),
             model:  document.getElementById('aiModel').value.trim(),
         };
         saveUserData(); showToast('Credenciales guardadas', 'success');
     });
 
-    // Form 2: advanced mode save
     document.getElementById('aiPromptForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        userData.aiConfig = {
-            ...userData.aiConfig,
+        userData.aiConfig = { ...userData.aiConfig,
             promptMode:        'advanced',
             prompt:            document.getElementById('aiPrompt').value,
             orderInstructions: document.getElementById('aiOrderInstructions').value,
@@ -244,65 +214,65 @@ document.addEventListener('DOMContentLoaded', () => {
         saveUserData(); showToast('Personalidad guardada', 'success');
     });
 
-    // ── Manual Rules ──
-    const renderRules = () => {
-        const list = document.getElementById('rulesList');
-        if (!userData.manualRules.length) {
-            list.innerHTML = '<p style="color:var(--text-muted);">No tienes reglas manuales aún.</p>'; return;
-        }
-        list.innerHTML = '';
-        userData.manualRules.forEach(r => {
-            const div = document.createElement('div');
-            div.className = 'product-card';
-            div.innerHTML = `
-                <div class="prod-header"><h4>Si dicen: <span class="highlight">"${r.keyword}"</span></h4></div>
-                <p style="color:var(--text-muted);font-size:0.88em;margin-bottom:6px;">Responde: ${r.reply}</p>
-                <button class="btn-danger" style="margin-top:auto;" onclick="window.deleteRule('${r.id}')">Eliminar</button>`;
-            list.appendChild(div);
-        });
+    // ─────────────────────────────────────────────────────────────────────────
+    // ── Flows ────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const STEP_TYPES = {
+        message:      { label: '💬 Mensaje',           hint: 'El bot envía un texto. Puedes agregar ramas para ramificar según la respuesta.' },
+        show_products:{ label: '🛍️ Mostrar Productos',  hint: 'El bot muestra el catálogo de productos registrados.' },
+        collect_data: { label: '📝 Recolectar Dato',    hint: 'El bot hace una pregunta y guarda la respuesta del cliente.' },
+        options:      { label: '📋 Menú de Opciones',   hint: 'El bot muestra un menú numerado y va al paso según la elección.' },
+        save_order:   { label: '✅ Guardar Pedido',     hint: 'Registra un pedido con todos los datos recolectados en el flujo.' },
     };
 
-    window.deleteRule = (id) => {
-        userData.manualRules = userData.manualRules.filter(r => r.id !== id);
-        renderRules(); saveUserData();
+    const COLLECT_FIELDS = [
+        { value: 'name',    label: 'Nombre del cliente' },
+        { value: 'phone',   label: 'Teléfono del cliente' },
+        { value: 'address', label: 'Dirección de entrega' },
+        { value: 'items',   label: 'Productos / lo que quiere pedir' },
+        { value: 'payment', label: 'Método de pago' },
+        { value: 'total',   label: 'Total / monto acordado' },
+        { value: 'notes',   label: 'Notas adicionales' },
+    ];
+
+    let editingFlowIdx = null;
+    let editingSteps   = [];
+
+    const TRIGGER_TYPE_LABELS = {
+        any_first_message: '🔔 Primer mensaje',
+        keyword: '🔤 Palabra clave',
     };
-
-    document.getElementById('ruleForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        userData.manualRules.push({
-            id: Date.now().toString(),
-            keyword: document.getElementById('ruleKeyword').value,
-            reply: document.getElementById('ruleReply').value
-        });
-        renderRules(); saveUserData(); e.target.reset();
-        showToast('Regla agregada', 'success');
-    });
-
-    // ── Conversation Flows ──────────────────────────────────────────────────
-
-    let editingFlowIdx = null;  // null = new flow, number = editing existing
-    let editingSteps   = [];    // working copy of steps in the editor
 
     const renderFlows = () => {
         const list = document.getElementById('flowsList');
         const flows = userData.conversationFlows || [];
         if (!flows.length) {
-            list.innerHTML = '<p style="color:var(--text-muted);">No tienes flujos creados aún. Crea uno para diseñar conversaciones ramificadas.</p>';
+            list.innerHTML = `
+                <div class="flow-empty-state">
+                    <i data-lucide="git-branch" style="width:44px;height:44px;opacity:0.2;margin-bottom:14px;"></i>
+                    <p style="font-weight:600;margin-bottom:6px;">No tienes flujos aún</p>
+                    <p style="color:var(--text-muted);font-size:0.85rem;">Crea tu primer flujo para automatizar conversaciones.</p>
+                </div>`;
+            lucide.createIcons();
             return;
         }
         list.innerHTML = '';
         flows.forEach((flow, idx) => {
+            const triggerLabel = flow.triggerType === 'any_first_message'
+                ? '🔔 Primer mensaje'
+                : `🔤 "${flow.trigger || ''}"`;
+            const stepSummary = (flow.steps || []).map(s => STEP_TYPES[s.type || 'message']?.label || '💬').join(' → ');
             const div = document.createElement('div');
             div.className = 'product-card flow-card';
             div.innerHTML = `
                 <div class="prod-header" style="flex-wrap:wrap;gap:6px;">
                     <h4 style="font-size:0.95rem;">${flow.name}</h4>
-                    <span class="flow-trigger-badge">${flow.trigger}</span>
+                    <span class="flow-trigger-badge">${triggerLabel}</span>
                 </div>
-                <p style="color:var(--text-muted);font-size:0.85em;margin:6px 0;">
-                    ${flow.steps.length} paso${flow.steps.length !== 1 ? 's' : ''}
-                </p>
-                <div style="display:flex;gap:8px;margin-top:8px;">
+                <p style="color:var(--text-muted);font-size:0.8em;margin:4px 0 2px;line-height:1.5;">${stepSummary || 'Sin pasos'}</p>
+                <p style="color:var(--text-muted);font-size:0.8em;">${(flow.steps || []).length} paso${(flow.steps || []).length !== 1 ? 's' : ''}</p>
+                <div style="display:flex;gap:8px;margin-top:10px;">
                     <button class="btn-secondary" style="padding:7px 14px;font-size:0.82rem;flex:1;"
                         onclick="window.openFlowEditor(${idx})">Editar</button>
                     <button class="btn-danger" style="padding:7px 14px;font-size:0.8rem;"
@@ -310,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
             list.appendChild(div);
         });
+        lucide.createIcons();
     };
 
     window.deleteFlow = (id) => {
@@ -322,18 +293,62 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openFlowEditor = (idx = null) => {
         editingFlowIdx = idx;
         const flow = idx !== null ? (userData.conversationFlows || [])[idx] : null;
-        editingSteps = flow ? JSON.parse(JSON.stringify(flow.steps)) : [];
+        editingSteps = flow ? JSON.parse(JSON.stringify(flow.steps || [])) : [];
 
-        document.getElementById('flowName').value    = flow?.name    || '';
+        document.getElementById('flowName').value = flow?.name || '';
+        const trigType = flow?.triggerType || 'any_first_message';
+        document.getElementById('flowTriggerType').value = trigType;
         document.getElementById('flowTrigger').value = flow?.trigger || '';
+        document.getElementById('flowTriggerKeywordRow').style.display = trigType === 'keyword' ? 'block' : 'none';
         document.getElementById('flowModalTitle').textContent = idx !== null ? 'Editar Flujo' : 'Nuevo Flujo';
         renderFlowEditor();
         document.getElementById('flowModal').style.display = 'flex';
     };
 
+    document.getElementById('flowTriggerType').addEventListener('change', (e) => {
+        document.getElementById('flowTriggerKeywordRow').style.display =
+            e.target.value === 'keyword' ? 'block' : 'none';
+    });
+
     document.getElementById('newFlowBtn').addEventListener('click', () => window.openFlowEditor(null));
 
-    // Render the steps inside the flow editor modal
+    // ── Flow Editor ──────────────────────────────────────────────────────────
+
+    const escHtml = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    const collectEditorState = () => {
+        document.querySelectorAll('.flow-step-card').forEach((card, si) => {
+            if (!editingSteps[si]) return;
+            const type = editingSteps[si].type || 'message';
+
+            editingSteps[si].message = card.querySelector('.step-message')?.value ?? '';
+
+            if (type === 'collect_data') {
+                editingSteps[si].field = card.querySelector('.step-field-select')?.value || 'name';
+            }
+
+            if (type === 'options') {
+                const optRows = card.querySelectorAll('.option-row');
+                editingSteps[si].options = Array.from(optRows).map(row => ({
+                    label: row.querySelector('.option-label-input')?.value || '',
+                    nextStep: parseInt(row.querySelector('.option-next-input')?.value ?? '-1'),
+                }));
+            }
+
+            if (type === 'message') {
+                card.querySelectorAll('.flow-branch').forEach((branchEl, bi) => {
+                    if (!editingSteps[si].branches) editingSteps[si].branches = [];
+                    if (!editingSteps[si].branches[bi]) return;
+                    editingSteps[si].branches[bi].keywords = branchEl.querySelector('.branch-keywords')?.value || '';
+                    editingSteps[si].branches[bi].nextStep = parseInt(branchEl.querySelector('.branch-next')?.value ?? '-1');
+                });
+            }
+
+            const defaultNextEl = card.querySelector('.default-next-input');
+            if (defaultNextEl) editingSteps[si].defaultNext = parseInt(defaultNextEl.value ?? '-1');
+        });
+    };
+
     const renderFlowEditor = () => {
         const container = document.getElementById('flowStepsContainer');
         container.innerHTML = '';
@@ -346,82 +361,150 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         editingSteps.forEach((step, si) => {
+            const type = step.type || 'message';
             const card = document.createElement('div');
             card.className = 'flow-step-card';
 
-            const branchesHtml = (step.branches || []).map((b, bi) => `
-                <div class="flow-branch">
-                    <span class="branch-label">Si dicen</span>
-                    <input class="branch-keywords" placeholder="palabras, separadas, por, coma" value="${escHtml(b.keywords || '')}">
-                    <span class="branch-arrow">→ ir al paso</span>
-                    <input class="branch-next" type="number" min="-1" max="${editingSteps.length - 1}" value="${b.nextStep ?? -1}">
-                    <button class="branch-del-btn" onclick="window.deleteBranch(${si},${bi})" title="Eliminar rama">×</button>
-                </div>
-            `).join('');
+            // ── Type selector ──
+            const typeOptions = Object.entries(STEP_TYPES).map(([v, d]) =>
+                `<option value="${v}" ${v === type ? 'selected' : ''}>${d.label}</option>`).join('');
+
+            // ── Message field (used by message, show_products, collect_data, save_order) ──
+            const showMsgField = ['message','show_products','collect_data','save_order'].includes(type);
+            const msgPlaceholders = {
+                message:       'Escribe lo que dirá el bot...',
+                show_products: 'Texto introductorio antes de los productos (opcional)',
+                collect_data:  '¿Cuál es tu pregunta? Ej: ¿Cuál es tu nombre completo?',
+                save_order:    'Mensaje de confirmación. Ej: ✅ ¡Pedido registrado! Te contactamos pronto.',
+            };
+            const msgField = showMsgField ? `
+                <div class="input-group" style="margin-bottom:10px;">
+                    <label style="font-size:0.78rem;">${type === 'collect_data' ? 'Pregunta al cliente' : type === 'save_order' ? 'Mensaje de confirmación' : 'Mensaje del bot'}</label>
+                    <textarea class="step-message" rows="3" placeholder="${msgPlaceholders[type] || ''}">${escHtml(step.message || '')}</textarea>
+                </div>` : '';
+
+            // ── Collect data: field selector ──
+            const fieldOptions = COLLECT_FIELDS.map(f =>
+                `<option value="${f.value}" ${f.value === (step.field || 'name') ? 'selected' : ''}>${f.label}</option>`).join('');
+            const collectSection = type === 'collect_data' ? `
+                <div class="input-group" style="margin-bottom:10px;">
+                    <label style="font-size:0.78rem;">Dato a recolectar</label>
+                    <select class="step-field-select">${fieldOptions}</select>
+                    <span style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">La respuesta del cliente se guardará con este nombre para usarla en "Guardar Pedido".</span>
+                </div>` : '';
+
+            // ── Options list ──
+            const optionsSection = type === 'options' ? (() => {
+                const opts = (step.options || [{ label: '', nextStep: -1 }]);
+                const optRows = opts.map((o, oi) => `
+                    <div class="option-row">
+                        <span class="option-num">${oi + 1}.</span>
+                        <input class="option-label-input" placeholder="Texto de la opción" value="${escHtml(o.label || '')}">
+                        <span class="option-arrow">→ paso</span>
+                        <input class="option-next-input" type="number" min="-1" max="${editingSteps.length - 1}" value="${o.nextStep ?? -1}">
+                        <button class="branch-del-btn" onclick="window.deleteOption(${si},${oi})" title="Eliminar opción">×</button>
+                    </div>`).join('');
+                return `
+                    <div class="options-section">
+                        <div class="branches-label">Opciones del menú <span style="color:var(--text-muted);font-size:0.78rem;">(el cliente elige por número)</span></div>
+                        <div class="options-list">${optRows}</div>
+                        <button class="add-branch-btn" onclick="window.addOption(${si})" style="margin-top:6px;">+ Agregar opción</button>
+                    </div>`;
+            })() : '';
+
+            // ── Branches (only for message type) ──
+            const branchesSection = type === 'message' ? (() => {
+                const branches = step.branches || [];
+                const branchesHtml = branches.map((b, bi) => `
+                    <div class="flow-branch">
+                        <span class="branch-label">Si dicen</span>
+                        <input class="branch-keywords" placeholder="palabras, separadas, por, coma" value="${escHtml(b.keywords || '')}">
+                        <span class="branch-arrow">→ ir al paso</span>
+                        <input class="branch-next" type="number" min="-1" max="${editingSteps.length - 1}" value="${b.nextStep ?? -1}">
+                        <button class="branch-del-btn" onclick="window.deleteBranch(${si},${bi})" title="Eliminar rama">×</button>
+                    </div>`).join('');
+                return `
+                    <div class="branches-section">
+                        <div class="branches-label">Ramas <span style="color:var(--text-muted);font-size:0.78rem;">(respuestas que redirigen a otro paso)</span></div>
+                        <div class="branches-list">${branchesHtml}</div>
+                        <button class="add-branch-btn" onclick="window.addBranch(${si})">+ Agregar rama</button>
+                    </div>`;
+            })() : '';
+
+            // ── Default next ──
+            const showDefaultNext = type !== 'save_order';
+            const defaultNextSection = showDefaultNext ? `
+                <div class="step-default-row">
+                    <label>${type === 'collect_data' ? 'Ir al paso después de recolectar:' : type === 'options' ? 'Si no reconoce la opción → ir al paso:' : 'Si ninguna rama coincide → ir al paso:'}</label>
+                    <input type="number" class="default-next-input" min="-1" max="${editingSteps.length - 1}" value="${typeof step.defaultNext === 'number' ? step.defaultNext : -1}">
+                    <span class="default-hint">(-1 = terminar flujo)</span>
+                </div>` : '';
+
+            // ── Type hint ──
+            const typeHint = STEP_TYPES[type]?.hint
+                ? `<div class="step-type-hint">${STEP_TYPES[type].hint}</div>` : '';
 
             card.innerHTML = `
                 <div class="step-card-header">
                     <span class="step-index-label">Paso ${si}</span>
-                    <button class="step-del-btn" onclick="window.deleteStep(${si})">× Eliminar paso</button>
+                    <select class="step-type-select" onchange="window.changeStepType(${si}, this.value)">${typeOptions}</select>
+                    <button class="step-del-btn" onclick="window.deleteStep(${si})">× Eliminar</button>
                 </div>
-                <div class="input-group" style="margin-bottom:10px;">
-                    <label style="font-size:0.78rem;">Mensaje del bot</label>
-                    <textarea class="step-message" rows="3" placeholder="Escribe lo que dirá el bot en este paso...">${escHtml(step.message || '')}</textarea>
-                </div>
-                <div class="branches-section">
-                    <div class="branches-label">Ramas <span style="color:var(--text-muted);font-size:0.78rem;">(según lo que responda el usuario)</span></div>
-                    <div class="branches-list">${branchesHtml}</div>
-                    <button class="add-branch-btn" onclick="window.addBranch(${si})">+ Agregar rama</button>
-                </div>
-                <div class="step-default-row">
-                    <label>Si ninguna rama coincide → ir al paso:</label>
-                    <input type="number" class="default-next-input" min="-1" max="${editingSteps.length - 1}" value="${step.defaultNext ?? -1}">
-                    <span class="default-hint">(-1 = terminar flujo)</span>
-                </div>
+                ${typeHint}
+                ${msgField}
+                ${collectSection}
+                ${optionsSection}
+                ${branchesSection}
+                ${defaultNextSection}
             `;
             container.appendChild(card);
         });
+
+        lucide.createIcons();
     };
 
-    const escHtml = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    // ── Step mutations ──
 
-    // Collect current form values into editingSteps before any mutation
-    const collectEditorState = () => {
-        document.querySelectorAll('.flow-step-card').forEach((card, si) => {
-            if (!editingSteps[si]) return;
-            editingSteps[si].message     = card.querySelector('.step-message')?.value || '';
-            editingSteps[si].defaultNext = parseInt(card.querySelector('.default-next-input')?.value ?? '-1');
-            card.querySelectorAll('.flow-branch').forEach((branchEl, bi) => {
-                if (!editingSteps[si].branches[bi]) return;
-                editingSteps[si].branches[bi].keywords  = branchEl.querySelector('.branch-keywords')?.value || '';
-                editingSteps[si].branches[bi].nextStep  = parseInt(branchEl.querySelector('.branch-next')?.value ?? '-1');
-            });
-        });
+    window.changeStepType = (si, newType) => {
+        collectEditorState();
+        editingSteps[si] = {
+            type: newType,
+            message: editingSteps[si].message || '',
+            defaultNext: editingSteps[si].defaultNext ?? -1,
+            branches: [],
+            options: newType === 'options' ? [{ label: '', nextStep: -1 }] : [],
+            field: newType === 'collect_data' ? (editingSteps[si].field || 'name') : undefined,
+        };
+        renderFlowEditor();
     };
 
     window.addFlowStep = () => {
         collectEditorState();
-        editingSteps.push({ message: '', branches: [], defaultNext: -1 });
+        editingSteps.push({ type: 'message', message: '', branches: [], options: [], defaultNext: -1 });
         renderFlowEditor();
     };
 
     window.deleteStep = (si) => {
         collectEditorState();
         editingSteps.splice(si, 1);
-        // Fix references: decrement indices that pointed to si+, remove refs to si
         editingSteps.forEach(step => {
-            step.branches.forEach(b => {
-                if (b.nextStep === si)       b.nextStep = -1;
-                else if (b.nextStep > si)    b.nextStep -= 1;
+            if (step.branches) step.branches.forEach(b => {
+                if (b.nextStep === si) b.nextStep = -1;
+                else if (b.nextStep > si) b.nextStep -= 1;
             });
-            if (step.defaultNext === si)     step.defaultNext = -1;
-            else if (step.defaultNext > si)  step.defaultNext -= 1;
+            if (step.options) step.options.forEach(o => {
+                if (o.nextStep === si) o.nextStep = -1;
+                else if (o.nextStep > si) o.nextStep -= 1;
+            });
+            if (step.defaultNext === si) step.defaultNext = -1;
+            else if (typeof step.defaultNext === 'number' && step.defaultNext > si) step.defaultNext -= 1;
         });
         renderFlowEditor();
     };
 
     window.addBranch = (si) => {
         collectEditorState();
+        if (!editingSteps[si].branches) editingSteps[si].branches = [];
         editingSteps[si].branches.push({ keywords: '', nextStep: -1 });
         renderFlowEditor();
     };
@@ -432,27 +515,40 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFlowEditor();
     };
 
+    window.addOption = (si) => {
+        collectEditorState();
+        if (!editingSteps[si].options) editingSteps[si].options = [];
+        editingSteps[si].options.push({ label: '', nextStep: -1 });
+        renderFlowEditor();
+    };
+
+    window.deleteOption = (si, oi) => {
+        collectEditorState();
+        editingSteps[si].options.splice(oi, 1);
+        renderFlowEditor();
+    };
+
     document.getElementById('addStepBtn').addEventListener('click', window.addFlowStep);
 
     document.getElementById('saveFlowBtn').addEventListener('click', () => {
         collectEditorState();
-        const name    = document.getElementById('flowName').value.trim();
-        const trigger = document.getElementById('flowTrigger').value.trim();
-        if (!name)    { alert('El flujo necesita un nombre.'); return; }
-        if (!trigger) { alert('El flujo necesita una palabra de activación.'); return; }
+        const name     = document.getElementById('flowName').value.trim();
+        const trigType = document.getElementById('flowTriggerType').value;
+        const trigger  = document.getElementById('flowTrigger').value.trim();
+
+        if (!name) { alert('El flujo necesita un nombre.'); return; }
+        if (trigType === 'keyword' && !trigger) { alert('Ingresa una palabra de activación.'); return; }
 
         if (!userData.conversationFlows) userData.conversationFlows = [];
 
+        const flowData = { name, triggerType: trigType, trigger: trigType === 'keyword' ? trigger : '', steps: editingSteps };
+
         if (editingFlowIdx !== null) {
             userData.conversationFlows[editingFlowIdx] = {
-                ...userData.conversationFlows[editingFlowIdx],
-                name, trigger, steps: editingSteps
+                ...userData.conversationFlows[editingFlowIdx], ...flowData
             };
         } else {
-            userData.conversationFlows.push({
-                id: 'flow_' + Date.now(),
-                name, trigger, steps: editingSteps
-            });
+            userData.conversationFlows.push({ id: 'flow_' + Date.now(), ...flowData });
         }
 
         document.getElementById('flowModal').style.display = 'none';
@@ -480,7 +576,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? new Date(s.device.connectedAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
                 : '—';
             const dotClass = s.status === 'connected' ? 'connected' : s.status === 'connecting' ? 'connecting' : 'disconnected';
-
             const row = document.createElement('div');
             row.className = 'device-row';
             row.innerHTML = `
@@ -489,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="device-phone">${phone}${name ? ` <span style="color:var(--text-muted);font-weight:400;font-size:0.85em;">${name}</span>` : ''}</div>
                     <div class="device-meta">${s.status === 'connected' ? `Conectado desde ${connAt}` : s.status === 'connecting' ? 'Conectando...' : 'Desconectado'}</div>
                 </div>
-                <button class="btn-danger" style="padding:6px 12px;font-size:0.8rem;" onclick="window.disconnectDevice('${s.sessionId}')">Desconectar</button>`;
+                <button class="btn-danger" style="flex-shrink:0;" onclick="window.disconnectDevice('${s.sessionId}')">Desconectar</button>`;
             list.appendChild(row);
         });
     };
@@ -508,7 +603,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchDevices();
     };
 
-    // ── Add Device Panel ──
     const addDeviceCard = document.getElementById('addDeviceCard');
     const addDeviceBtn  = document.getElementById('addDeviceBtn');
 
@@ -562,8 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const startQRCountdown = () => {
-        const timerWrap = document.getElementById('qrTimer');
-        const timerBar  = document.getElementById('timerBar');
+        const timerWrap  = document.getElementById('qrTimer');
+        const timerBar   = document.getElementById('timerBar');
         const timerLabel = document.getElementById('timerLabel');
         timerWrap.style.display = 'flex';
         let remaining = QR_TIMEOUT_MS / 1000;
@@ -677,21 +771,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const localNumber = document.getElementById('phoneNumber').value.replace(/\D/g, '');
         const phone       = countryCode + localNumber;
         const errorEl     = document.getElementById('pairingError');
-
         if (!localNumber || localNumber.length < 5) {
             errorEl.textContent = 'Ingresa un número de teléfono válido (sin código de país).';
             errorEl.style.display = 'block'; return;
         }
-
         errorEl.style.display = 'none';
         document.getElementById('pairingCodeDisplay').style.display = 'none';
         document.getElementById('phoneTimeoutMsg').style.display    = 'none';
         btn.disabled = true; btn.textContent = 'Solicitando...';
-
         try {
             const res  = await fetch('/api/request-pairing-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, phoneNumber: phone }) });
             const data = await res.json();
-
             if (data.success) {
                 activePhoneSessionId = data.sessionId;
                 const raw = data.code || '';
@@ -740,7 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
             list.innerHTML = `<div class="orders-empty">
                 <i data-lucide="inbox" style="width:40px;height:40px;stroke-width:1.5;color:var(--text-muted);margin-bottom:12px;"></i>
                 <p>No hay pedidos aún.</p>
-                <p style="font-size:0.82rem;color:var(--text-muted);margin-top:6px;">Los pedidos que detecte la IA aparecerán aquí automáticamente.</p>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-top:6px;">Los pedidos que detecte la IA o los flujos aparecerán aquí.</p>
             </div>`;
             lucide.createIcons();
             return;
@@ -750,7 +840,7 @@ document.addEventListener('DOMContentLoaded', () => {
         orders.forEach(order => {
             const st    = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
             const items = (order.items || []).map(i =>
-                `<span class="order-item-tag">${i.quantity ? i.quantity + 'x ' : ''}${i.name}${i.price ? ' ($' + i.price + ')' : ''}</span>`
+                `<span class="order-item-tag">${i.quantity ? i.quantity + 'x ' : ''}${i.name}${i.price ? ' (' + i.price + ')' : ''}</span>`
             ).join('');
 
             const card = document.createElement('div');
@@ -767,16 +857,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="order-time">${formatOrderDate(order.timestamp)}</span>
                     </div>
                 </div>
-
                 ${items ? `<div class="order-items">${items}</div>` : ''}
-
                 <div class="order-details-grid">
                     ${order.address       ? `<div class="order-detail"><i data-lucide="map-pin" style="width:13px;height:13px;"></i><span>${order.address}</span></div>` : ''}
                     ${order.paymentMethod ? `<div class="order-detail"><i data-lucide="credit-card" style="width:13px;height:13px;"></i><span>${order.paymentMethod}</span></div>` : ''}
                     ${order.total         ? `<div class="order-detail"><i data-lucide="dollar-sign" style="width:13px;height:13px;"></i><span>Total: <strong>${order.total}</strong></span></div>` : ''}
                     ${order.notes         ? `<div class="order-detail" style="grid-column:1/-1;"><i data-lucide="file-text" style="width:13px;height:13px;"></i><span>${order.notes}</span></div>` : ''}
                 </div>
-
                 <div class="order-actions">
                     <select class="order-status-select" data-id="${order.id}">
                         <option value="pending"   ${order.status==='pending'   ? 'selected':''}>Pendiente</option>
@@ -836,11 +923,82 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Actualizando pedidos...');
     });
 
-    // Auto-refresh orders every 30s when on orders view
     setInterval(() => {
         const ordersSection = document.getElementById('view-orders');
         if (ordersSection && ordersSection.classList.contains('active')) fetchOrders();
     }, 30000);
+
+    // ── Profile ──────────────────────────────────────────────────────────────
+
+    const loadProfile = async () => {
+        try {
+            const res = await fetch(`/api/profile/${userId}`);
+            if (res.ok) {
+                const data = await res.json();
+                const uname = data.username || 'Usuario';
+                document.getElementById('profileUsernameDisplay').textContent = uname;
+                document.getElementById('profileIdDisplay').textContent = `ID: ${data.id || userId}`;
+                document.getElementById('profileAvatarCircle').textContent = uname.charAt(0).toUpperCase();
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    document.getElementById('changeUsernameForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msgEl = document.getElementById('usernameMsg');
+        const newUsername    = document.getElementById('newUsername').value.trim();
+        const currentPassword = document.getElementById('passForUsername').value;
+        msgEl.textContent = '';
+        msgEl.style.color = '';
+        if (!newUsername) { msgEl.textContent = 'Ingresa el nuevo nombre.'; msgEl.style.color = 'var(--danger)'; return; }
+        try {
+            const res  = await fetch(`/api/profile/${userId}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword, newUsername })
+            });
+            const data = await res.json();
+            if (data.success) {
+                msgEl.textContent = '✓ Nombre actualizado correctamente.';
+                msgEl.style.color = 'var(--success)';
+                document.getElementById('profileUsernameDisplay').textContent = data.username;
+                document.getElementById('profileAvatarCircle').textContent = data.username.charAt(0).toUpperCase();
+                document.getElementById('changeUsernameForm').reset();
+                showToast('Nombre de usuario actualizado', 'success');
+            } else {
+                msgEl.textContent = data.message || 'Error al actualizar.';
+                msgEl.style.color = 'var(--danger)';
+            }
+        } catch { msgEl.textContent = 'Error de conexión.'; msgEl.style.color = 'var(--danger)'; }
+    });
+
+    document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msgEl = document.getElementById('passwordMsg');
+        const currentPass = document.getElementById('currentPass').value;
+        const newPass     = document.getElementById('newPass').value;
+        const confirmPass = document.getElementById('confirmPass').value;
+        msgEl.textContent = '';
+        msgEl.style.color = '';
+        if (!newPass) { msgEl.textContent = 'Ingresa la nueva contraseña.'; msgEl.style.color = 'var(--danger)'; return; }
+        if (newPass !== confirmPass) { msgEl.textContent = 'Las contraseñas no coinciden.'; msgEl.style.color = 'var(--danger)'; return; }
+        if (newPass.length < 4) { msgEl.textContent = 'La contraseña debe tener al menos 4 caracteres.'; msgEl.style.color = 'var(--danger)'; return; }
+        try {
+            const res  = await fetch(`/api/profile/${userId}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword: currentPass, newPassword: newPass })
+            });
+            const data = await res.json();
+            if (data.success) {
+                msgEl.textContent = '✓ Contraseña actualizada correctamente.';
+                msgEl.style.color = 'var(--success)';
+                document.getElementById('changePasswordForm').reset();
+                showToast('Contraseña actualizada', 'success');
+            } else {
+                msgEl.textContent = data.message || 'Error al actualizar.';
+                msgEl.style.color = 'var(--danger)';
+            }
+        } catch { msgEl.textContent = 'Error de conexión.'; msgEl.style.color = 'var(--danger)'; }
+    });
 
     // ── Init ──
     fetchUserData();

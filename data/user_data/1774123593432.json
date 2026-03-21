@@ -30,5 +30,21 @@
       "description": "Pipocas de pollo solo tenemos 10"
     }
   ],
-  "conversationFlows": []
+  "conversationFlows": [
+    {
+      "id": "flow_1774128923641",
+      "name": "Jijija",
+      "triggerType": "any_first_message",
+      "trigger": "",
+      "steps": [
+        {
+          "type": "message",
+          "message": "",
+          "branches": [],
+          "options": [],
+          "defaultNext": -1
+        }
+      ]
+    }
+  ]
 }

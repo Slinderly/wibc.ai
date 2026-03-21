@@ -147,6 +147,36 @@ router.delete('/orders/:userId/:orderId', (req, res) => {
     } catch { res.status(500).json({ success: false }); }
 });
 
+// ── Profile ──
+router.get('/profile/:userId', (req, res) => {
+    ensureDataFiles();
+    const users = JSON.parse(fs.readFileSync(usersFile));
+    const user = users.find(u => u.id === req.params.userId);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ username: user.username, id: user.id });
+});
+
+router.post('/profile/:userId', (req, res) => {
+    ensureDataFiles();
+    const { currentPassword, newUsername, newPassword } = req.body;
+    let users = JSON.parse(fs.readFileSync(usersFile));
+    const idx = users.findIndex(u => u.id === req.params.userId);
+    if (idx === -1) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    if (users[idx].password !== currentPassword)
+        return res.status(401).json({ success: false, message: 'Contraseña actual incorrecta' });
+
+    if (newUsername && newUsername.trim()) {
+        const taken = users.find((u, i) => u.username === newUsername.trim() && i !== idx);
+        if (taken) return res.status(409).json({ success: false, message: 'Ese nombre ya está en uso' });
+        users[idx].username = newUsername.trim();
+    }
+    if (newPassword && newPassword.trim()) {
+        users[idx].password = newPassword.trim();
+    }
+    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+    res.json({ success: true, username: users[idx].username });
+});
+
 // ── WhatsApp ──
 router.get('/qr/:userId/:sessionId', getQRHandler);
 router.get('/devices/:userId', getDevicesHandler);

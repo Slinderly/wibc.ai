@@ -2,21 +2,21 @@ const path = require('path');
 const fs = require('fs');
 const { GoogleGenAI } = require("@google/genai");
 
-// In-memory flow state per user per contact
-// key: `${userId}:${jid}` → { flowId, stepIndex }
+// ── Flow state per conversation ───────────────────────────────────────────────
+// key: `${userId}:${jid}` → { flowId, stepIndex, waitingForData, waitingField,
+//                              waitingForOptions, collectedData, defaultNext }
 const flowState = {};
 
-// In-memory conversation history per user per contact (AI mode only)
-// key: `${userId}:${jid}` → [ { role: 'user'|'bot', text: string } ]
+// Track seen contacts per user (for "any_first_message" trigger)
+// key: `${userId}:${jid}`
+const seenContacts = new Set();
+
+// ── AI mode: conversation history ────────────────────────────────────────────
 const conversationHistory = {};
 const MAX_HISTORY = 20;
-
-// Track at which history length the system prompt was last sent per conversation
-// key: `${userId}:${jid}` → number (history.length when system was last sent)
 const lastSystemSentAt = {};
-const SYSTEM_REFRESH_EVERY = 15; // re-send system prompt every N messages
+const SYSTEM_REFRESH_EVERY = 15;
 
-// Keywords that imply the user is asking about products / prices
 const PRODUCT_KEYWORDS = [
     'precio', 'precios', 'producto', 'productos', 'catálogo', 'catalogo',
     'cuánto', 'cuanto', 'vale', 'cuesta', 'costo', 'costos',
@@ -32,7 +32,7 @@ const messageNeedsProducts = (text) => {
     return PRODUCT_KEYWORDS.some(kw => lower.includes(kw));
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const addToHistory = (key, role, text) => {
     if (!conversationHistory[key]) conversationHistory[key] = [];
@@ -61,17 +61,16 @@ const orderAlreadySaved = (userId, jid, conversationSnapshot) => {
     if (!fs.existsSync(filePath)) return false;
     try {
         const orders = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        // Avoid duplicate: check if last order from this jid matches the current conversation length
         const last = [...orders].reverse().find(o => o.jid === jid);
         if (!last) return false;
         return last._historyLength === conversationSnapshot;
     } catch (_) { return false; }
 };
 
-// ── Order Detection via Gemini ────────────────────────────────────────────────
+// ── AI order detection ────────────────────────────────────────────────────────
 const detectAndSaveOrder = async (userId, jid, phone, history, aiConfig) => {
     if (!aiConfig.apiKey || !aiConfig.apiKey.trim()) return;
-    if (history.length < 4) return; // need a minimum conversation
+    if (history.length < 4) return;
 
     const historyText = history
         .map(h => `${h.role === 'user' ? 'Cliente' : 'Bot'}: ${h.text}`)
@@ -101,19 +100,12 @@ Responde SOLO con el JSON o la palabra null. Sin explicaciones.`;
         const ai = new GoogleGenAI({ apiKey: aiConfig.apiKey });
         const result = await ai.models.generateContent({ model, contents: detectionPrompt });
         const raw = (result.text || '').trim();
-
         if (raw === 'null' || raw === '') return;
-
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         if (!jsonMatch) return;
-
         const extracted = JSON.parse(jsonMatch[0]);
-
-        // Avoid saving duplicate for same conversation length
         if (orderAlreadySaved(userId, jid, history.length)) return;
-
         const cleanPhone = jid.split('@')[0];
-
         const order = {
             id: 'order_' + Date.now(),
             jid,
@@ -128,16 +120,135 @@ Responde SOLO con el JSON o la palabra null. Sin explicaciones.`;
             timestamp: new Date().toISOString(),
             _historyLength: history.length
         };
-
         saveOrder(userId, order);
-        console.log(`[wibc.ai] 🛒 Pedido guardado para ${userId} desde ${cleanPhone}`);
+        console.log(`[wibc.ai] 🛒 Pedido IA guardado para ${userId} desde ${cleanPhone}`);
     } catch (e) {
-        // Silent: don't break the bot if order detection fails
         console.error('[wibc.ai] Error detección pedido:', e.message);
     }
 };
 
-// ── Main Response Generator ───────────────────────────────────────────────────
+// ── Flow engine ───────────────────────────────────────────────────────────────
+
+const buildProductList = (products, introMsg) => {
+    let msg = introMsg ? introMsg + '\n\n' : '';
+    if (!products || !products.length) {
+        msg += '_(Sin productos registrados aún)_';
+    } else {
+        products.forEach((p, i) => {
+            msg += `*${i + 1}. ${p.name}*`;
+            if (p.price) msg += ` — ${p.price}`;
+            if (p.description && p.description.trim()) msg += `\n_${p.description}_`;
+            msg += '\n';
+        });
+    }
+    return msg.trim();
+};
+
+// Execute the step at state.stepIndex, chain auto-advance steps, return response string.
+const executeFlowStep = (userId, jid, flow, state, userData) => {
+    const stateKey = `${userId}:${jid}`;
+    const products = userData.products || [];
+    const messages = [];
+    const visited = new Set();
+
+    while (true) {
+        const si = state.stepIndex;
+        const step = flow.steps[si];
+
+        if (!step || visited.has(si)) {
+            delete flowState[stateKey];
+            break;
+        }
+        visited.add(si);
+
+        const type = step.type || 'message';
+
+        if (type === 'message') {
+            if (step.message) messages.push(step.message);
+            if (step.branches && step.branches.length > 0) {
+                // Stay on this step, wait for branch input
+                break;
+            }
+            const nextIdx = typeof step.defaultNext === 'number' ? step.defaultNext : -1;
+            if (nextIdx >= 0 && nextIdx < flow.steps.length) {
+                state.stepIndex = nextIdx;
+            } else {
+                delete flowState[stateKey];
+                break;
+            }
+
+        } else if (type === 'show_products') {
+            messages.push(buildProductList(products, step.message));
+            const nextIdx = typeof step.defaultNext === 'number' ? step.defaultNext : -1;
+            if (nextIdx >= 0 && nextIdx < flow.steps.length) {
+                state.stepIndex = nextIdx;
+            } else {
+                delete flowState[stateKey];
+                break;
+            }
+
+        } else if (type === 'collect_data') {
+            if (step.message) messages.push(step.message);
+            state.waitingForData = true;
+            state.waitingField = step.field || 'data';
+            state.defaultNext = typeof step.defaultNext === 'number' ? step.defaultNext : -1;
+            break;
+
+        } else if (type === 'options') {
+            let msg = step.message ? step.message + '\n\n' : '';
+            (step.options || []).forEach((opt, i) => {
+                msg += `*${i + 1}.* ${opt.label}\n`;
+            });
+            messages.push(msg.trim());
+            state.waitingForOptions = true;
+            break;
+
+        } else if (type === 'save_order') {
+            const cd = state.collectedData || {};
+            const cleanPhone = jid.split('@')[0];
+            const order = {
+                id: 'order_' + Date.now(),
+                jid,
+                phone: cd.phone || ('+' + cleanPhone),
+                customerName: cd.name || null,
+                address: cd.address || null,
+                paymentMethod: cd.payment || null,
+                total: cd.total || null,
+                notes: cd.notes || null,
+                items: cd.items ? [{ name: cd.items, quantity: '', price: '' }] : [],
+                status: 'pending',
+                timestamp: new Date().toISOString(),
+                _historyLength: 0
+            };
+            saveOrder(userId, order);
+            console.log(`[wibc.ai] 🛒 Pedido manual guardado para ${userId} desde ${cleanPhone}`);
+            if (step.message) messages.push(step.message);
+            // Clear collected data after saving
+            state.collectedData = {};
+            const nextIdx = typeof step.defaultNext === 'number' ? step.defaultNext : -1;
+            if (nextIdx >= 0 && nextIdx < flow.steps.length) {
+                state.stepIndex = nextIdx;
+            } else {
+                delete flowState[stateKey];
+                break;
+            }
+
+        } else {
+            // Unknown type, skip
+            const nextIdx = typeof step.defaultNext === 'number' ? step.defaultNext : -1;
+            if (nextIdx >= 0 && nextIdx < flow.steps.length) {
+                state.stepIndex = nextIdx;
+            } else {
+                delete flowState[stateKey];
+                break;
+            }
+        }
+    }
+
+    return messages.length ? messages.join('\n\n') : null;
+};
+
+// ── Main response generator ───────────────────────────────────────────────────
 const generateAIResponse = async (userId, incomingMessage, jid = '') => {
     return new Promise(async (resolve) => {
         const userDataPath = path.join(__dirname, `../data/user_data/${userId}.json`);
@@ -149,37 +260,88 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
 
         const userData = JSON.parse(fs.readFileSync(userDataPath, 'utf8'));
         const { botMode, manualRules, aiConfig, products, conversationFlows } = userData;
-
         const mode = botMode || 'ai';
 
-        // ── Modo Manual: Flujos + Palabras Clave ────────────────────────────
+        // ── Manual mode ──────────────────────────────────────────────────────
         if (mode === 'manual') {
             const flows = conversationFlows || [];
             const rules = manualRules || [];
             const msgLower = incomingMessage.toLowerCase().trim();
             const stateKey = `${userId}:${jid}`;
 
-            // 1. Si hay un flujo activo para este contacto → continuar flujo
+            const isFirstMsg = !seenContacts.has(stateKey);
+            seenContacts.add(stateKey);
+
+            // ── Active flow ──────────────────────────────────────────────────
             const activeState = flowState[stateKey];
             if (activeState) {
                 const flow = flows.find(f => f.id === activeState.flowId);
+
                 if (flow) {
-                    const step = flow.steps[activeState.stepIndex];
-                    if (step) {
-                        let nextIdx = step.defaultNext ?? -1;
-                        for (const branch of (step.branches || [])) {
+                    // Waiting for data (collect_data step)
+                    if (activeState.waitingForData) {
+                        if (!activeState.collectedData) activeState.collectedData = {};
+                        activeState.collectedData[activeState.waitingField] = incomingMessage;
+                        activeState.waitingForData = false;
+                        activeState.waitingField = null;
+                        const nextIdx = typeof activeState.defaultNext === 'number' ? activeState.defaultNext : -1;
+                        if (nextIdx >= 0 && nextIdx < flow.steps.length) {
+                            activeState.stepIndex = nextIdx;
+                            resolve(executeFlowStep(userId, jid, flow, activeState, userData));
+                        } else {
+                            delete flowState[stateKey];
+                            resolve(null);
+                        }
+                        return;
+                    }
+
+                    // Waiting for option selection
+                    if (activeState.waitingForOptions) {
+                        const currentStep = flow.steps[activeState.stepIndex];
+                        if (currentStep) {
+                            const opts = currentStep.options || [];
+                            const numMatch = parseInt(msgLower.trim());
+                            let nextIdx = typeof currentStep.defaultNext === 'number' ? currentStep.defaultNext : -1;
+
+                            if (!isNaN(numMatch) && numMatch >= 1 && numMatch <= opts.length) {
+                                const opt = opts[numMatch - 1];
+                                nextIdx = typeof opt.nextStep === 'number' ? opt.nextStep : -1;
+                            } else {
+                                for (let i = 0; i < opts.length; i++) {
+                                    if (msgLower.includes(opts[i].label.toLowerCase())) {
+                                        nextIdx = typeof opts[i].nextStep === 'number' ? opts[i].nextStep : -1;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            activeState.waitingForOptions = false;
+                            if (nextIdx >= 0 && nextIdx < flow.steps.length) {
+                                activeState.stepIndex = nextIdx;
+                                resolve(executeFlowStep(userId, jid, flow, activeState, userData));
+                            } else {
+                                delete flowState[stateKey];
+                                resolve(null);
+                            }
+                            return;
+                        }
+                    }
+
+                    // Waiting for branch input (message step with branches)
+                    const currentStep = flow.steps[activeState.stepIndex];
+                    if (currentStep && currentStep.branches && currentStep.branches.length > 0) {
+                        let nextIdx = typeof currentStep.defaultNext === 'number' ? currentStep.defaultNext : -1;
+                        for (const branch of currentStep.branches) {
                             const kws = (branch.keywords || '').split(',')
-                                .map(k => k.trim().toLowerCase())
-                                .filter(Boolean);
+                                .map(k => k.trim().toLowerCase()).filter(Boolean);
                             if (kws.some(k => msgLower.includes(k))) {
-                                nextIdx = branch.nextStep ?? -1;
+                                nextIdx = typeof branch.nextStep === 'number' ? branch.nextStep : -1;
                                 break;
                             }
                         }
-
                         if (nextIdx >= 0 && nextIdx < flow.steps.length) {
-                            flowState[stateKey] = { flowId: flow.id, stepIndex: nextIdx };
-                            resolve(flow.steps[nextIdx].message);
+                            activeState.stepIndex = nextIdx;
+                            resolve(executeFlowStep(userId, jid, flow, activeState, userData));
                         } else {
                             delete flowState[stateKey];
                             resolve(null);
@@ -187,32 +349,55 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                         return;
                     }
                 }
+
                 delete flowState[stateKey];
             }
 
-            // 2. Buscar si el mensaje activa un nuevo flujo
+            // ── Trigger: primer mensaje ───────────────────────────────────
+            if (isFirstMsg) {
+                const firstMsgFlow = flows.find(f =>
+                    f.triggerType === 'any_first_message' && f.steps && f.steps.length > 0);
+                if (firstMsgFlow) {
+                    const state = {
+                        flowId: firstMsgFlow.id, stepIndex: 0,
+                        waitingForData: false, waitingField: null,
+                        waitingForOptions: false, defaultNext: -1,
+                        collectedData: {}
+                    };
+                    flowState[stateKey] = state;
+                    resolve(executeFlowStep(userId, jid, firstMsgFlow, state, userData));
+                    return;
+                }
+            }
+
+            // ── Trigger: palabra clave ────────────────────────────────────
             const triggeredFlow = flows.find(f =>
-                f.trigger && msgLower.includes(f.trigger.toLowerCase()) && f.steps.length > 0
+                f.triggerType !== 'any_first_message' &&
+                f.trigger && msgLower.includes(f.trigger.toLowerCase()) &&
+                f.steps && f.steps.length > 0
             );
             if (triggeredFlow) {
-                flowState[stateKey] = { flowId: triggeredFlow.id, stepIndex: 0 };
-                resolve(triggeredFlow.steps[0].message);
+                const state = {
+                    flowId: triggeredFlow.id, stepIndex: 0,
+                    waitingForData: false, waitingField: null,
+                    waitingForOptions: false, defaultNext: -1,
+                    collectedData: {}
+                };
+                flowState[stateKey] = state;
+                resolve(executeFlowStep(userId, jid, triggeredFlow, state, userData));
                 return;
             }
 
-            // 3. Palabras clave simples
+            // ── Fallback: legacy keyword rules ────────────────────────────
             const matchedRule = rules.find(r => r.keyword && msgLower.includes(r.keyword.toLowerCase()));
-            if (matchedRule) {
-                resolve(matchedRule.reply);
-                return;
-            }
+            if (matchedRule) { resolve(matchedRule.reply); return; }
 
             resolve(null);
             return;
         }
 
-        // ── Modo IA: Google Gemini ───────────────────────────────────────────
-        if (aiConfig.apiKey && aiConfig.apiKey.trim() !== '') {
+        // ── AI mode: Google Gemini ────────────────────────────────────────────
+        if (aiConfig && aiConfig.apiKey && aiConfig.apiKey.trim() !== '') {
             try {
                 const ai = new GoogleGenAI({ apiKey: aiConfig.apiKey });
                 const model = (aiConfig.model && aiConfig.model.trim()) ? aiConfig.model.trim() : 'gemini-2.5-flash';
@@ -224,10 +409,8 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                 const shouldSendSystem = isFirstMessage || messagesSinceSystem >= SYSTEM_REFRESH_EVERY;
                 const shouldIncludeProducts = isFirstMessage || messageNeedsProducts(incomingMessage);
 
-                // Add incoming message to history
                 addToHistory(histKey, 'user', incomingMessage);
 
-                // Build conversation history string (excluding current message)
                 const historyText = (conversationHistory[histKey] || [])
                     .slice(0, -1)
                     .map(h => `${h.role === 'user' ? 'Cliente' : 'Bot'}: ${h.text}`)
@@ -235,7 +418,6 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
 
                 let contents = '';
 
-                // ── System prompt block (only when needed) ──
                 if (shouldSendSystem) {
                     contents += `[INSTRUCCIONES DEL SISTEMA]\n`;
                     contents += `Eres un asistente virtual de ventas para WhatsApp. Responde siempre en el idioma del cliente.\n`;
@@ -250,7 +432,6 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                     lastSystemSentAt[histKey] = (conversationHistory[histKey] || []).length;
                 }
 
-                // ── Product catalog block (only when relevant) ──
                 if (shouldIncludeProducts && products && products.length > 0) {
                     contents += `[CATÁLOGO DE PRODUCTOS]\n`;
                     products.forEach(p => {
@@ -263,21 +444,17 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                     contents += `[FIN CATÁLOGO]\n\n`;
                 }
 
-                // ── Conversation history ──
                 if (historyText) {
                     contents += `[CONVERSACIÓN ANTERIOR]\n${historyText}\n[FIN CONVERSACIÓN]\n\n`;
                 }
 
-                // ── Current message ──
                 contents += `Cliente: ${incomingMessage}`;
 
                 const response = await ai.models.generateContent({ model, contents });
                 const reply = response.text;
 
-                // Add bot response to history
                 addToHistory(histKey, 'bot', reply);
 
-                // Async order detection (don't await so we don't slow down the reply)
                 const currentHistory = [...(conversationHistory[histKey] || [])];
                 const cleanPhone = jid.split('@')[0];
                 detectAndSaveOrder(userId, jid, '+' + cleanPhone, currentHistory, aiConfig)
@@ -292,7 +469,7 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
             }
         }
 
-        // ── Sin API Key configurada ──────────────────────────────────────────
+        // ── Sin API Key ───────────────────────────────────────────────────────
         let response = "⚠️ *Configuración Pendiente*\n\n";
         response += "Wibc.ai necesita una **API Key** para funcionar con Inteligencia Artificial.\n\n";
         response += "🔧 Configura el bot desde tu panel.\n\n";
