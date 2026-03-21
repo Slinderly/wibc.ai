@@ -243,7 +243,9 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                     if (aiConfig.context && aiConfig.context.trim()) {
                         contents += `Instrucciones estrictas: ${aiConfig.context}\n`;
                     }
-                    contents += `Si preguntan por productos/precios y no los recuerdas, diles que con gusto te los comparten si preguntan.\n`;
+                    if (aiConfig.orderInstructions && aiConfig.orderInstructions.trim()) {
+                        contents += `Instrucciones para tomar pedidos: ${aiConfig.orderInstructions}\n`;
+                    }
                     contents += `[FIN INSTRUCCIONES]\n\n`;
                     lastSystemSentAt[histKey] = (conversationHistory[histKey] || []).length;
                 }
@@ -252,7 +254,9 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                 if (shouldIncludeProducts && products && products.length > 0) {
                     contents += `[CATÁLOGO DE PRODUCTOS]\n`;
                     products.forEach(p => {
-                        contents += `- ${p.name}: $${p.price} — ${p.description}\n`;
+                        let line = `- ${p.name}: ${p.price}`;
+                        if (p.description && p.description.trim()) line += ` — ${p.description}`;
+                        contents += line + '\n';
                     });
                     contents += `[FIN CATÁLOGO]\n\n`;
                 }

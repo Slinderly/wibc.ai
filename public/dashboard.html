@@ -87,38 +87,112 @@
 
             <!-- Card 2: Personality -->
             <div class="card glassmorphism">
-                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">2 — Personalidad del Bot</h3>
-                <form id="aiPromptForm">
-                    <div class="input-group">
-                        <label for="aiPrompt">Prompt de personalidad</label>
-                        <textarea id="aiPrompt" rows="5" placeholder="Eres un vendedor virtual amable para WhatsApp. Tu objetivo es..."></textarea>
-                    </div>
+                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:14px;color:var(--text-muted);">2 — Personalidad del Bot</h3>
 
-                    <!-- AI Prompt Generator -->
-                    <div class="prompt-gen-section">
-                        <button type="button" id="togglePromptGen" class="prompt-gen-toggle">
-                            <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
-                            Generar prompt con IA
-                            <i data-lucide="chevron-down" id="promptGenChevron" style="width:14px;height:14px;margin-left:auto;transition:transform 0.2s;"></i>
-                        </button>
-                        <div id="promptGenPanel" style="display:none;">
-                            <p class="prompt-gen-hint">Descríbele a la IA tu negocio y qué quieres que haga el bot. Ella va a generar el prompt completo.</p>
-                            <div id="promptGenChat" class="prompt-gen-chat"></div>
-                            <div class="prompt-gen-input-row">
-                                <textarea id="promptGenInput" rows="2" placeholder="Ej: Tengo una tienda de empanadas, quiero que tome pedidos a domicilio..."></textarea>
-                                <button type="button" id="promptGenSend" class="btn-primary" style="width:auto;padding:10px 16px;flex-shrink:0;">
-                                    <i data-lucide="send" style="width:15px;height:15px;"></i>
-                                </button>
+                <!-- Mode tabs -->
+                <div class="prompt-mode-tabs">
+                    <button type="button" class="prompt-mode-tab active" data-mode="wizard">
+                        <i data-lucide="list-checks" style="width:14px;height:14px;"></i> Modo Fácil
+                    </button>
+                    <button type="button" class="prompt-mode-tab" data-mode="advanced">
+                        <i data-lucide="code-2" style="width:14px;height:14px;"></i> Modo Avanzado
+                    </button>
+                </div>
+
+                <!-- ── WIZARD PANEL ── -->
+                <div id="panel-wizard" class="prompt-mode-panel">
+                    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:18px;">Responde las preguntas y el bot se configura automáticamente.</p>
+                    <form id="wizardForm">
+                        <div class="wizard-grid">
+                            <div class="input-group">
+                                <label>¿Cómo se llamará el bot?</label>
+                                <input type="text" id="wBotName" placeholder="Ej: Valeria, Asistente, Bot">
+                            </div>
+                            <div class="input-group">
+                                <label>Nombre del negocio / tienda</label>
+                                <input type="text" id="wBusinessName" placeholder="Ej: Empanadas Don Pedro">
+                            </div>
+                            <div class="input-group" style="grid-column:1/-1;">
+                                <label>Personalidad del bot</label>
+                                <input type="text" id="wPersonality" placeholder="Ej: amable y profesional, divertido, formal">
+                            </div>
+                            <div class="input-group">
+                                <label>Ubicación del negocio</label>
+                                <input type="text" id="wLocation" placeholder="Ej: Av. Siempre Viva 123, Santa Cruz">
+                            </div>
+                            <div class="input-group">
+                                <label>Teléfono del negocio</label>
+                                <input type="text" id="wBusinessPhone" placeholder="Ej: +591 70000000">
+                            </div>
+                            <div class="input-group">
+                                <label>Horario de atención (desde)</label>
+                                <input type="text" id="wHoursFrom" placeholder="Ej: 9:00 AM">
+                            </div>
+                            <div class="input-group">
+                                <label>Horario de atención (hasta)</label>
+                                <input type="text" id="wHoursTo" placeholder="Ej: 9:00 PM">
+                            </div>
+                            <div class="input-group">
+                                <label>Moneda (unidad de precio)</label>
+                                <input type="text" id="wCurrency" placeholder="Ej: Bs, $, Pesos, Soles">
+                            </div>
+                            <div class="input-group" style="grid-column:1/-1;">
+                                <label class="wizard-toggle-label">
+                                    ¿El negocio hace envíos a domicilio?
+                                    <label class="wizard-switch">
+                                        <input type="checkbox" id="wDoesDelivery">
+                                        <span class="wizard-slider"></span>
+                                    </label>
+                                </label>
+                            </div>
+                            <div id="wDeliveryRow" class="input-group" style="grid-column:1/-1;display:none;">
+                                <label>¿Qué datos pide al cliente para el envío?</label>
+                                <input type="text" id="wDeliveryData" placeholder="Ej: nombre completo, dirección exacta, referencia, barrio">
+                            </div>
+                            <div class="input-group" style="grid-column:1/-1;">
+                                <label class="wizard-toggle-label">
+                                    ¿Debe pedir el número de teléfono del cliente al confirmar el pedido?
+                                    <label class="wizard-switch">
+                                        <input type="checkbox" id="wAskClientPhone" checked>
+                                        <span class="wizard-slider"></span>
+                                    </label>
+                                </label>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="input-group" style="margin-top:16px;">
-                        <label for="aiContext">Instrucciones extra / Restricciones</label>
-                        <textarea id="aiContext" rows="3" placeholder="No ofrezcas descuentos mayores a 10%. Solo atiende de lunes a sábado..."></textarea>
-                    </div>
-                    <button type="submit" class="btn-primary">Guardar personalidad</button>
-                </form>
+                        <!-- Generated prompt preview -->
+                        <div class="wizard-preview-wrap" id="wizardPreviewWrap" style="display:none;">
+                            <div class="wizard-preview-label">Prompt generado (puedes editarlo):</div>
+                            <textarea id="wizardPromptPreview" rows="7" style="font-size:0.82rem;"></textarea>
+                        </div>
+
+                        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                            <button type="button" id="wizardPreviewBtn" class="btn-secondary" style="flex:1;">Vista previa del prompt</button>
+                            <button type="submit" class="btn-primary" style="flex:1;">Guardar configuración</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ── ADVANCED PANEL ── -->
+                <div id="panel-advanced" class="prompt-mode-panel" style="display:none;">
+                    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;">Control total. La IA lee todos los productos con nombre, precio y descripción exactos.</p>
+                    <form id="aiPromptForm">
+                        <div class="input-group">
+                            <label for="aiPrompt">Prompt de personalidad</label>
+                            <textarea id="aiPrompt" rows="6" placeholder="Eres un vendedor virtual amable para WhatsApp..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="aiOrderInstructions">Instrucciones para guardar pedidos</label>
+                            <textarea id="aiOrderInstructions" rows="3" placeholder="Ej: Siempre pide nombre completo, dirección exacta, barrio y referencia. Confirma el método de pago (efectivo o transferencia) antes de registrar el pedido."></textarea>
+                            <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Dile a la IA exactamente qué datos recolectar al tomar un pedido.</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="aiContext">Restricciones / Instrucciones extra</label>
+                            <textarea id="aiContext" rows="3" placeholder="No ofrezcas descuentos mayores al 10%. No atiendas fuera del horario establecido..."></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">Guardar personalidad</button>
+                    </form>
+                </div>
             </div>
         </section>
 

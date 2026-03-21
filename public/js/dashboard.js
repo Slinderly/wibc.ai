@@ -113,13 +113,111 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── AI Config ──
+    const buildWizardPrompt = (w) => {
+        const botName  = w.botName      || 'el asistente virtual';
+        const bizName  = w.businessName || 'el negocio';
+        const persona  = w.personality  || 'amable y profesional';
+
+        let p = `Eres ${botName}, el asistente virtual de ${bizName}. Tu personalidad es ${persona}. Tu objetivo es atender a los clientes, presentar los productos disponibles y tomar pedidos de forma clara y ordenada.\n\n`;
+
+        if (w.doesDelivery) {
+            const data = w.deliveryData || 'nombre completo, dirección, referencia';
+            p += `Realizamos envíos a domicilio. Para coordinar cualquier pedido con envío, solicita siempre al cliente: ${data}.\n`;
+        } else {
+            p += `Los pedidos son únicamente para retirar en tienda, no realizamos envíos a domicilio.\n`;
+        }
+
+        if (w.location)      p += `\nNuestra ubicación: ${w.location}.`;
+        if (w.businessPhone) p += `\nTeléfono directo del negocio: ${w.businessPhone}.`;
+        if (w.hoursFrom && w.hoursTo) p += `\nHorario de atención: de ${w.hoursFrom} a ${w.hoursTo}.`;
+        if (w.currency)      p += `\nTodos los precios están expresados en ${w.currency}.`;
+        if (w.askClientPhone) p += `\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.`;
+
+        return p.trim();
+    };
+
     const renderConfigForm = () => {
         document.getElementById('botMode').value   = userData.botMode;
         document.getElementById('apiKey').value    = userData.aiConfig.apiKey || '';
-        document.getElementById('aiModel').value   = userData.aiConfig.model || '';
-        document.getElementById('aiPrompt').value  = userData.aiConfig.prompt || '';
+        document.getElementById('aiModel').value   = userData.aiConfig.model  || '';
         document.getElementById('aiContext').value = userData.aiConfig.context || '';
+        document.getElementById('aiPrompt').value  = userData.aiConfig.prompt  || '';
+        document.getElementById('aiOrderInstructions').value = userData.aiConfig.orderInstructions || '';
+
+        const mode = userData.aiConfig.promptMode || 'wizard';
+        setPromptMode(mode);
+
+        const w = userData.aiConfig.wizardData || {};
+        document.getElementById('wBotName').value       = w.botName       || '';
+        document.getElementById('wBusinessName').value  = w.businessName  || '';
+        document.getElementById('wPersonality').value   = w.personality   || '';
+        document.getElementById('wLocation').value      = w.location      || '';
+        document.getElementById('wBusinessPhone').value = w.businessPhone || '';
+        document.getElementById('wHoursFrom').value     = w.hoursFrom     || '';
+        document.getElementById('wHoursTo').value       = w.hoursTo       || '';
+        document.getElementById('wCurrency').value      = w.currency      || '';
+        document.getElementById('wDoesDelivery').checked   = !!w.doesDelivery;
+        document.getElementById('wAskClientPhone').checked = w.askClientPhone !== false;
+        document.getElementById('wDeliveryRow').style.display = w.doesDelivery ? 'block' : 'none';
+        document.getElementById('wDeliveryData').value  = w.deliveryData  || '';
     };
+
+    // ── Mode tabs ──
+    const setPromptMode = (mode) => {
+        document.querySelectorAll('.prompt-mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+        document.getElementById('panel-wizard').style.display   = mode === 'wizard'   ? 'block' : 'none';
+        document.getElementById('panel-advanced').style.display = mode === 'advanced' ? 'block' : 'none';
+        userData.aiConfig = { ...userData.aiConfig, promptMode: mode };
+        lucide.createIcons();
+    };
+
+    document.querySelectorAll('.prompt-mode-tab').forEach(tab => {
+        tab.addEventListener('click', () => setPromptMode(tab.dataset.mode));
+    });
+
+    // Delivery toggle
+    document.getElementById('wDoesDelivery').addEventListener('change', (e) => {
+        document.getElementById('wDeliveryRow').style.display = e.target.checked ? 'block' : 'none';
+    });
+
+    // Wizard preview
+    const getWizardData = () => ({
+        botName:      document.getElementById('wBotName').value.trim(),
+        businessName: document.getElementById('wBusinessName').value.trim(),
+        personality:  document.getElementById('wPersonality').value.trim(),
+        location:     document.getElementById('wLocation').value.trim(),
+        businessPhone:document.getElementById('wBusinessPhone').value.trim(),
+        hoursFrom:    document.getElementById('wHoursFrom').value.trim(),
+        hoursTo:      document.getElementById('wHoursTo').value.trim(),
+        currency:     document.getElementById('wCurrency').value.trim(),
+        doesDelivery: document.getElementById('wDoesDelivery').checked,
+        deliveryData: document.getElementById('wDeliveryData').value.trim(),
+        askClientPhone: document.getElementById('wAskClientPhone').checked,
+    });
+
+    document.getElementById('wizardPreviewBtn').addEventListener('click', () => {
+        const w = getWizardData();
+        const prompt = buildWizardPrompt(w);
+        const wrap = document.getElementById('wizardPreviewWrap');
+        document.getElementById('wizardPromptPreview').value = prompt;
+        wrap.style.display = 'block';
+    });
+
+    // Wizard save
+    document.getElementById('wizardForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const w = getWizardData();
+        const prompt = document.getElementById('wizardPromptPreview').style.display !== 'none'
+            ? document.getElementById('wizardPromptPreview').value
+            : buildWizardPrompt(w);
+        userData.aiConfig = {
+            ...userData.aiConfig,
+            promptMode:  'wizard',
+            wizardData:  w,
+            prompt,
+        };
+        saveUserData(); showToast('Configuración guardada', 'success');
+    });
 
     // Form 1: credentials
     document.getElementById('aiCredForm').addEventListener('submit', (e) => {
@@ -133,87 +231,17 @@ document.addEventListener('DOMContentLoaded', () => {
         saveUserData(); showToast('Credenciales guardadas', 'success');
     });
 
-    // Form 2: prompt + context
+    // Form 2: advanced mode save
     document.getElementById('aiPromptForm').addEventListener('submit', (e) => {
         e.preventDefault();
         userData.aiConfig = {
             ...userData.aiConfig,
-            prompt:  document.getElementById('aiPrompt').value,
-            context: document.getElementById('aiContext').value,
+            promptMode:        'advanced',
+            prompt:            document.getElementById('aiPrompt').value,
+            orderInstructions: document.getElementById('aiOrderInstructions').value,
+            context:           document.getElementById('aiContext').value,
         };
         saveUserData(); showToast('Personalidad guardada', 'success');
-    });
-
-    // ── Prompt Generator Chat ──
-    let promptGenHistory = [];
-    let promptGenOpen    = false;
-
-    document.getElementById('togglePromptGen').addEventListener('click', () => {
-        promptGenOpen = !promptGenOpen;
-        document.getElementById('promptGenPanel').style.display = promptGenOpen ? 'block' : 'none';
-        document.getElementById('promptGenChevron').style.transform = promptGenOpen ? 'rotate(180deg)' : '';
-        lucide.createIcons();
-    });
-
-    const appendPromptGenMsg = (role, text) => {
-        const chat = document.getElementById('promptGenChat');
-        const div  = document.createElement('div');
-        div.className = `pgc-msg pgc-${role}`;
-
-        if (role === 'ai') {
-            div.innerHTML = `
-                <p class="pgc-text">${text.replace(/\n/g, '<br>')}</p>
-                <button class="pgc-use-btn" onclick="window.useGeneratedPrompt(this)">Usar este prompt</button>`;
-        } else {
-            div.innerHTML = `<p class="pgc-text">${text.replace(/\n/g, '<br>')}</p>`;
-        }
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-    };
-
-    window.useGeneratedPrompt = (btn) => {
-        const text = btn.previousElementSibling.textContent;
-        document.getElementById('aiPrompt').value = text;
-        showToast('Prompt aplicado. Guarda la personalidad para activarlo.', 'success');
-    };
-
-    const sendPromptGen = async () => {
-        const input = document.getElementById('promptGenInput');
-        const msg   = input.value.trim();
-        if (!msg) return;
-
-        const btn = document.getElementById('promptGenSend');
-        btn.disabled = true;
-        input.value  = '';
-
-        appendPromptGenMsg('user', msg);
-
-        try {
-            const res  = await fetch(`/api/prompt-chat/${userId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: msg, history: promptGenHistory })
-            });
-            const data = await res.json();
-            if (data.success) {
-                appendPromptGenMsg('ai', data.reply);
-                promptGenHistory.push({ role: 'user', text: msg });
-                promptGenHistory.push({ role: 'ai',   text: data.reply });
-                if (promptGenHistory.length > 20) promptGenHistory = promptGenHistory.slice(-20);
-            } else {
-                appendPromptGenMsg('ai', '⚠️ ' + (data.message || 'Error. Verifica tu API Key en la sección de credenciales.'));
-            }
-        } catch {
-            appendPromptGenMsg('ai', '⚠️ Error de conexión. Intenta de nuevo.');
-        }
-
-        btn.disabled = false;
-        input.focus();
-    };
-
-    document.getElementById('promptGenSend').addEventListener('click', sendPromptGen);
-    document.getElementById('promptGenInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPromptGen(); }
     });
 
     // ── Manual Rules ──

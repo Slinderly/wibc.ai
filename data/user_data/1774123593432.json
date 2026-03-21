@@ -3,9 +3,9 @@
   "manualRules": [],
   "aiConfig": {
     "apiKey": "AIzaSyBSyOrdUBl69-m78T9eYkuYqz-fj_UjgyQ",
-    "model": "gemini-3-flash-preview",
-    "prompt": "Eres un vendedor virtual.que guardas los pedidos con toda la información necesaria para hacer la entrega en pedidos ",
-    "context": "Los precios en bs"
+    "prompt": "Vende lo que hay en productos nombre cantidad y descripción y guarda en pedidos si queren",
+    "context": "Los precios en bs",
+    "model": ""
   },
   "products": [
     {
