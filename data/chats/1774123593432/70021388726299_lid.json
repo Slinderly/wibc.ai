@@ -1,0 +1,104 @@
+[
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-21T22:07:07.597Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-21T22:07:07.750Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-21T22:07:23.910Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-21T22:07:23.970Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-21T22:07:39.916Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-21T22:07:39.976Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-21T22:09:02.835Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-21T22:09:02.891Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-21T22:09:17.018Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-21T22:09:17.069Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-21T22:09:55.221Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Agente: ¡Hola! Disculpa la espera. He recibido tus mensajes. ¿En qué puedo ayudarte?",
+    "ts": "2026-03-21T22:09:59.139Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Que haces",
+    "ts": "2026-03-21T22:10:09.702Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Aquí tienes algunas opciones para la respuesta del bot, manteniendo un tono profesional y servicial:\n\n**Opción 1 (Directa y al grano):**\nBot: \"¡Hola! Estoy aquí precisamente para asistirte y resolver cualquier consulta o problema que tengas. Por favor, cuéntame, ¿en qué puedo ayudarte hoy?\"\n\n**Opción 2 (Con un toque más personal, manteniendo profesionalismo):**\nBot: \"¡Hola! Gracias por preguntar. Como tu agente, mi función es ayudarte con lo que necesites. ¿Cuál es el motivo de tu consulta?\"\n\n**Opción 3 (Enfocada en la disponibilidad):**\nBot: \"¡Hola! Estoy disponible y listo para escucharte. Mi objetivo es asistirte de la mejor manera posible. ¿Cómo puedo ayudarte ahora mismo?\"\n\n---\n\n**Recomendación:** La **Opción 1** es muy efectiva porque agradece implícitamente la pregunta del cliente (\"que haces\") al responder con su propósito, y luego redirige la conversación al objetivo principal de manera clara y amable.\n\n**Bot:** \"¡Hola! Estoy aquí precisamente para asistirte y resolver cualquier consulta o problema que tengas. Por favor, cuéntame, ¿en qué puedo ayudarte hoy?\"",
+    "ts": "2026-03-21T22:10:17.285Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-21T22:10:51.106Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Aquí tienes algunas opciones para la respuesta del bot, manteniendo un tono profesional y servicial, y tratando de guiar al cliente para que exprese su necesidad:\n\n**Opción 1 (Reafirmando disposición y re-preguntando de forma directa):**\nBot: \"¡Hola de nuevo! Estoy aquí para escucharte. Por favor, cuéntame, ¿en qué puedo ayudarte hoy o cuál es el motivo de tu consulta?\"\n\n**Opción 2 (Un poco más suave, intentando romper el ciclo de \"Hola\"):**\nBot: \"¡Hola! Gracias por tu saludo. Para poder asistirte de la mejor manera, ¿podrías, por favor, explicarme qué necesitas o qué te trae por aquí?\"\n\n**Opción 3 (Enfocada en el siguiente paso):**\nBot: \"Hola. Estoy listo para ayudarte. Para que podamos avanzar, por favor, dime qué necesitas que hagamos hoy.\"\n\n---\n\n**Recomendación:** La **Opción 1** es muy efectiva. Agradece implícitamente el saludo (\"Hola de nuevo\"), reafirma la disponibilidad del agente (\"Estoy aquí para escucharte\") y vuelve a pedir la información clave de manera clara y con una pequeña variación para la pregunta, lo que puede ayudar al cliente a salir del bucle de \"Hola\".\n\n**Bot:** \"¡Hola de nuevo! Estoy aquí para escucharte. Por favor, cuéntame, ¿en qué puedo ayudarte hoy o cuál es el motivo de tu consulta?\"",
+    "ts": "2026-03-21T22:10:58.231Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Hola",
+    "ts": "2026-03-21T22:11:21.740Z",
+    "jid": "70021388726299@lid"
+  }
+]

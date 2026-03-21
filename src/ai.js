@@ -14,8 +14,6 @@ const seenContacts = new Set();
 // ── AI mode: conversation history ────────────────────────────────────────────
 const conversationHistory = {};
 const MAX_HISTORY = 20;
-const lastSystemSentAt = {};
-const SYSTEM_REFRESH_EVERY = 15;
 
 // ── Chat persistence ──────────────────────────────────────────────────────────
 const chatsDir = path.join(__dirname, '../data/chats');
@@ -460,54 +458,48 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                 const model = (aiConfig.model && aiConfig.model.trim()) ? aiConfig.model.trim() : 'gemini-2.5-flash';
                 const histKey = `${userId}:${jid}`;
 
-                const currentLen = (conversationHistory[histKey] || []).length;
-                const isFirstMessage = currentLen === 0;
-                const messagesSinceSystem = currentLen - (lastSystemSentAt[histKey] ?? -SYSTEM_REFRESH_EVERY);
-                const shouldSendSystem = isFirstMessage || messagesSinceSystem >= SYSTEM_REFRESH_EVERY;
-                const shouldIncludeProducts = isFirstMessage || messageNeedsProducts(incomingMessage);
+                const shouldIncludeProducts = messageNeedsProducts(incomingMessage) ||
+                    !(conversationHistory[histKey] || []).length;
 
+                // ── Build system instruction (separate from conversation) ──────
+                let systemInstruction = `Eres un asistente virtual de ventas en WhatsApp. Responde SIEMPRE en el idioma en que te escribe el cliente.\n`;
+                systemInstruction += `${aiConfig.prompt || 'Eres un vendedor amable y profesional.'}\n`;
+                if (aiConfig.context && aiConfig.context.trim()) {
+                    systemInstruction += `\n${aiConfig.context}\n`;
+                }
+                if (aiConfig.orderInstructions && aiConfig.orderInstructions.trim()) {
+                    systemInstruction += `\nPara tomar pedidos: ${aiConfig.orderInstructions}\n`;
+                }
+                if (shouldIncludeProducts && products && products.length > 0) {
+                    systemInstruction += `\nPRODUCTOS DISPONIBLES:\n`;
+                    products.forEach(p => {
+                        systemInstruction += `• ${p.name} — ${p.price}`;
+                        if (p.description && p.description.trim()) systemInstruction += ` (${p.description})`;
+                        systemInstruction += '\n';
+                    });
+                }
+
+                // ── Add user message to history, build strictly alternating contents ──
                 addToHistory(histKey, 'user', incomingMessage);
 
-                const historyText = (conversationHistory[histKey] || [])
-                    .slice(0, -1)
-                    .map(h => `${h.role === 'user' ? 'Cliente' : 'Bot'}: ${h.text}`)
-                    .join('\n');
-
-                let contents = '';
-
-                if (shouldSendSystem) {
-                    contents += `[INSTRUCCIONES DEL SISTEMA]\n`;
-                    contents += `Eres un asistente virtual de ventas para WhatsApp. Responde siempre en el idioma del cliente.\n`;
-                    contents += `Personalidad: ${aiConfig.prompt || 'Eres un vendedor amable y profesional.'}\n`;
-                    if (aiConfig.context && aiConfig.context.trim()) {
-                        contents += `Instrucciones estrictas: ${aiConfig.context}\n`;
-                    }
-                    if (aiConfig.orderInstructions && aiConfig.orderInstructions.trim()) {
-                        contents += `Instrucciones para tomar pedidos: ${aiConfig.orderInstructions}\n`;
-                    }
-                    contents += `[FIN INSTRUCCIONES]\n\n`;
-                    lastSystemSentAt[histKey] = (conversationHistory[histKey] || []).length;
+                const rawHistory = conversationHistory[histKey] || [];
+                const contents = [];
+                let expectedRole = 'user';
+                for (const h of rawHistory) {
+                    const role = h.role === 'user' ? 'user' : 'model';
+                    if (role !== expectedRole) continue;
+                    contents.push({ role, parts: [{ text: h.text }] });
+                    expectedRole = role === 'user' ? 'model' : 'user';
+                }
+                if (!contents.length || contents[contents.length - 1].role !== 'user') {
+                    contents.push({ role: 'user', parts: [{ text: incomingMessage }] });
                 }
 
-                if (shouldIncludeProducts && products && products.length > 0) {
-                    contents += `[CATÁLOGO DE PRODUCTOS]\n`;
-                    products.forEach(p => {
-                        contents += `Producto: ${p.name} | Precio: ${p.price}`;
-                        if (p.description && p.description.trim()) {
-                            contents += ` | Descripción: ${p.description}`;
-                        }
-                        contents += '\n';
-                    });
-                    contents += `[FIN CATÁLOGO]\n\n`;
-                }
-
-                if (historyText) {
-                    contents += `[CONVERSACIÓN ANTERIOR]\n${historyText}\n[FIN CONVERSACIÓN]\n\n`;
-                }
-
-                contents += `Cliente: ${incomingMessage}`;
-
-                const response = await ai.models.generateContent({ model, contents });
+                const response = await ai.models.generateContent({
+                    model,
+                    config: { systemInstruction },
+                    contents,
+                });
                 const reply = response.text;
 
                 addToHistory(histKey, 'bot', reply);
