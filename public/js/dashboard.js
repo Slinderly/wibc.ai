@@ -25,6 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
             b.classList.toggle('active', b.dataset.view === viewName));
         if (viewName === 'profile') loadProfile();
         if (viewName === 'flows') renderFlows();
+        if (viewName === 'chats') {
+            loadChatContacts();
+            // On mobile: show contacts panel, hide chat window
+            document.getElementById('chatContactsPanel').classList.remove('chat-hidden');
+            document.getElementById('chatWindowPanel').classList.add('chat-hidden');
+        }
     };
 
     document.querySelectorAll('.nav-links li').forEach(li =>
@@ -871,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <option value="delivered" ${order.status==='delivered' ? 'selected':''}>Entregado</option>
                         <option value="cancelled" ${order.status==='cancelled' ? 'selected':''}>Cancelado</option>
                     </select>
+                    ${order.jid ? `<button class="btn-secondary order-chat-btn" data-jid="${order.jid}" data-phone="${order.phone || ''}" style="width:auto;padding:7px 12px;font-size:0.8rem;display:flex;align-items:center;gap:5px;"><i data-lucide="message-circle" style="width:13px;height:13px;"></i>Chat</button>` : ''}
                     <button class="btn-danger order-delete-btn" data-id="${order.id}" style="width:auto;padding:7px 14px;font-size:0.8rem;">Eliminar</button>
                 </div>
             `;
@@ -902,6 +909,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 allOrders = allOrders.filter(o => o.id !== id);
                 renderOrders();
                 showToast('Pedido eliminado');
+            });
+        });
+
+        list.querySelectorAll('.order-chat-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                window.openChatFromOrder(btn.dataset.jid, btn.dataset.phone);
             });
         });
     };
@@ -999,6 +1012,187 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch { msgEl.textContent = 'Error de conexión.'; msgEl.style.color = 'var(--danger)'; }
     });
+
+    // ── Chats ────────────────────────────────────────────────────────────────
+
+    let activeChatJid = null;
+
+    const formatChatTime = (iso) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        const now = new Date();
+        const isToday = d.toDateString() === now.toDateString();
+        if (isToday) return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+    };
+
+    const formatChatFullTime = (iso) => {
+        if (!iso) return '';
+        return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const jidToB64 = (jid) => btoa(unescape(encodeURIComponent(jid)));
+
+    const loadChatContacts = async () => {
+        try {
+            const res = await fetch(`/api/chats/${userId}`);
+            if (!res.ok) return;
+            const { contacts } = await res.json();
+            const list = document.getElementById('chatContactsList');
+            if (!contacts || !contacts.length) {
+                list.innerHTML = `<div class="chat-contacts-empty">
+                    <i data-lucide="message-circle" style="width:32px;height:32px;opacity:0.2;"></i>
+                    <p>Sin conversaciones aún</p>
+                    <p style="font-size:0.76rem;margin-top:4px;">Las conversaciones con tus clientes aparecerán aquí</p>
+                </div>`;
+                lucide.createIcons();
+                return;
+            }
+            list.innerHTML = '';
+            contacts.forEach(contact => {
+                const phone = contact.phone || '+' + contact.jid.split('@')[0];
+                const initial = phone.replace(/\D/g, '').slice(-2, -1) || '?';
+                const previewPrefix = contact.lastRole === 'bot' ? '🤖 ' : '';
+                const preview = contact.lastMessage
+                    ? (previewPrefix + contact.lastMessage).slice(0, 45)
+                    : '';
+                const item = document.createElement('div');
+                item.className = 'chat-contact-item' + (activeChatJid === contact.jid ? ' active' : '');
+                item.dataset.jid = contact.jid;
+                item.innerHTML = `
+                    <div class="chat-contact-avatar">${initial}</div>
+                    <div class="chat-contact-body">
+                        <div class="chat-contact-phone">${phone}</div>
+                        ${preview ? `<div class="chat-contact-preview">${preview}</div>` : ''}
+                    </div>
+                    <div class="chat-contact-time">${formatChatTime(contact.lastTs)}</div>
+                `;
+                item.addEventListener('click', () => openChatThread(contact.jid, phone));
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        } catch (e) { console.error('[wibc.ai] loadChatContacts:', e); }
+    };
+
+    const openChatThread = async (jid, phone) => {
+        activeChatJid = jid;
+        const phone$ = phone || ('+' + jid.split('@')[0]);
+        const initial = phone$.replace(/\D/g, '').slice(-2, -1) || '?';
+
+        document.getElementById('chatThreadPhone').textContent = phone$;
+        document.getElementById('chatThreadAvatar').textContent = initial;
+        document.getElementById('chatThreadJid').textContent = jid;
+
+        document.getElementById('chatWindowEmpty').style.display = 'none';
+        document.getElementById('chatWindowActive').style.display = 'flex';
+
+        document.querySelectorAll('.chat-contact-item').forEach(el =>
+            el.classList.toggle('active', el.dataset.jid === jid));
+
+        // Mobile: hide contact list, show chat window
+        document.getElementById('chatContactsPanel').classList.add('chat-hidden');
+        document.getElementById('chatWindowPanel').classList.remove('chat-hidden');
+
+        document.getElementById('chatMessages').innerHTML =
+            '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:0.82rem;">Cargando mensajes...</div>';
+
+        try {
+            const res = await fetch(`/api/chats/${userId}/${jidToB64(jid)}`);
+            if (!res.ok) return;
+            const { messages } = await res.json();
+            renderChatMessages(messages);
+        } catch (e) { console.error('[wibc.ai] openChatThread:', e); }
+
+        document.getElementById('chatComposeInput').focus();
+        lucide.createIcons();
+    };
+
+    const renderChatMessages = (messages) => {
+        const container = document.getElementById('chatMessages');
+        if (!messages || !messages.length) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:0.82rem;">Sin mensajes aún</div>';
+            return;
+        }
+        container.innerHTML = '';
+        let lastDay = '';
+        messages.forEach(msg => {
+            const day = msg.ts ? new Date(msg.ts).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+            if (day && day !== lastDay) {
+                lastDay = day;
+                const label = document.createElement('div');
+                label.className = 'chat-day-label';
+                label.textContent = day;
+                container.appendChild(label);
+            }
+            const wrap = document.createElement('div');
+            wrap.className = 'chat-bubble-wrap ' + (msg.role === 'user' ? 'from-user' : 'from-bot');
+            wrap.innerHTML = `
+                <div class="chat-bubble">${escHtml(msg.text)}</div>
+                <div class="chat-bubble-time">${formatChatFullTime(msg.ts)}</div>
+            `;
+            container.appendChild(wrap);
+        });
+        container.scrollTop = container.scrollHeight;
+    };
+
+    const sendChatMessage = async () => {
+        if (!activeChatJid) return;
+        const input = document.getElementById('chatComposeInput');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        input.focus();
+
+        const optimistic = document.createElement('div');
+        optimistic.className = 'chat-bubble-wrap from-bot';
+        optimistic.innerHTML = `
+            <div class="chat-bubble">${escHtml(text)}</div>
+            <div class="chat-bubble-time">Enviando...</div>
+        `;
+        const container = document.getElementById('chatMessages');
+        container.appendChild(optimistic);
+        container.scrollTop = container.scrollHeight;
+
+        try {
+            const res = await fetch(`/api/chats/${userId}/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jid: activeChatJid, text })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                optimistic.querySelector('.chat-bubble-time').textContent = '⚠️ ' + (data.message || 'Error al enviar');
+                optimistic.querySelector('.chat-bubble').style.opacity = '0.5';
+                showToast(data.message || 'Error al enviar', 'danger');
+            } else {
+                optimistic.querySelector('.chat-bubble-time').textContent = formatChatFullTime(new Date().toISOString());
+            }
+        } catch (e) {
+            optimistic.querySelector('.chat-bubble-time').textContent = '⚠️ Sin conexión';
+            optimistic.querySelector('.chat-bubble').style.opacity = '0.5';
+        }
+    };
+
+    document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
+    document.getElementById('chatComposeInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+    });
+
+    document.getElementById('refreshChatsBtn').addEventListener('click', loadChatContacts);
+
+    document.getElementById('chatBackBtn').addEventListener('click', () => {
+        activeChatJid = null;
+        document.getElementById('chatContactsPanel').classList.remove('chat-hidden');
+        document.getElementById('chatWindowPanel').classList.add('chat-hidden');
+        document.getElementById('chatWindowActive').style.display = 'none';
+        document.getElementById('chatWindowEmpty').style.display = 'flex';
+    });
+
+    // ── Expose openChatFromOrder for Orders ──
+    window.openChatFromOrder = (jid, phone) => {
+        switchView('chats');
+        setTimeout(() => openChatThread(jid, phone), 50);
+    };
 
     // ── Init ──
     fetchUserData();

@@ -5,8 +5,9 @@ const path = require('path');
 const { GoogleGenAI } = require('@google/genai');
 const {
     getQRHandler, getDevicesHandler, initSessionHandler,
-    startBaileysWithPairingCode, disconnectSession
+    startBaileysWithPairingCode, disconnectSession, sendMessageToJid
 } = require('./whatsapp');
+const { getChatHistory, listChatContacts, saveChatMessage } = require('./ai');
 
 const dataDir    = path.join(__dirname, '../data');
 const usersFile  = path.join(dataDir, 'users.json');
@@ -199,6 +200,30 @@ router.post('/request-pairing-code', async (req, res) => {
     } catch (err) {
         console.error('[wibc.ai] Error código:', err);
         res.status(500).json({ success: false, message: 'No se pudo generar el código.' });
+    }
+});
+
+// ── Chats ──
+router.get('/chats/:userId', (req, res) => {
+    const contacts = listChatContacts(req.params.userId);
+    res.json({ contacts });
+});
+
+router.get('/chats/:userId/:jidB64', (req, res) => {
+    const jid = Buffer.from(req.params.jidB64, 'base64').toString('utf8');
+    const messages = getChatHistory(req.params.userId, jid);
+    res.json({ messages });
+});
+
+router.post('/chats/:userId/send', async (req, res) => {
+    const { jid, text } = req.body;
+    if (!jid || !text) return res.status(400).json({ success: false, message: 'Faltan datos' });
+    try {
+        await sendMessageToJid(req.params.userId, jid, text);
+        saveChatMessage(req.params.userId, jid, 'bot', text);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
     }
 });
 

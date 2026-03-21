@@ -66,6 +66,9 @@
             <li data-view="orders">
                 <i data-lucide="clipboard-list"></i><span>Pedidos</span>
             </li>
+            <li data-view="chats">
+                <i data-lucide="message-circle"></i><span>Mensajes</span>
+            </li>
             <li data-view="whatsapp">
                 <i data-lucide="smartphone"></i><span>WhatsApp</span>
             </li>
@@ -388,6 +391,59 @@
             </div>
         </section>
 
+        <!-- Chats View -->
+        <section id="view-chats" class="view-section">
+            <div class="view-title">
+                <h2>wibc<span class="highlight">.ai</span></h2>
+                <span class="view-subtitle">Historial de conversaciones</span>
+            </div>
+            <div class="chat-layout">
+                <!-- Contact list panel -->
+                <div class="chat-contacts-panel glassmorphism" id="chatContactsPanel">
+                    <div class="chat-contacts-header">
+                        <span>Conversaciones</span>
+                        <button class="btn-icon-sm" id="refreshChatsBtn" title="Actualizar">
+                            <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
+                        </button>
+                    </div>
+                    <div class="chat-contacts-list" id="chatContactsList">
+                        <div class="chat-contacts-empty">
+                            <i data-lucide="message-circle" style="width:32px;height:32px;opacity:0.2;"></i>
+                            <p>Sin conversaciones aún</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat window panel -->
+                <div class="chat-window-panel glassmorphism" id="chatWindowPanel">
+                    <div class="chat-window-empty" id="chatWindowEmpty">
+                        <i data-lucide="message-circle" style="width:52px;height:52px;opacity:0.15;margin-bottom:16px;"></i>
+                        <p style="font-weight:600;margin-bottom:6px;">Selecciona una conversación</p>
+                        <p style="font-size:0.82rem;color:var(--text-muted);">Haz clic en un contacto para ver el historial</p>
+                    </div>
+                    <div class="chat-window-active" id="chatWindowActive" style="display:none;flex-direction:column;height:100%;">
+                        <div class="chat-thread-header">
+                            <button class="chat-back-btn" id="chatBackBtn">
+                                <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
+                            </button>
+                            <div class="chat-thread-avatar" id="chatThreadAvatar">?</div>
+                            <div class="chat-thread-info">
+                                <div class="chat-thread-phone" id="chatThreadPhone">—</div>
+                                <div class="chat-thread-jid" id="chatThreadJid"></div>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="chatMessages"></div>
+                        <div class="chat-compose">
+                            <input type="text" class="chat-compose-input" id="chatComposeInput" placeholder="Escribe un mensaje...">
+                            <button class="chat-send-btn" id="chatSendBtn">
+                                <i data-lucide="send" style="width:16px;height:16px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Profile View -->
         <section id="view-profile" class="view-section">
             <div class="view-title">
@@ -461,6 +517,10 @@
         <button class="bottom-nav-item" data-view="orders">
             <i data-lucide="clipboard-list"></i>
             <span>Pedidos</span>
+        </button>
+        <button class="bottom-nav-item" data-view="chats">
+            <i data-lucide="message-circle"></i>
+            <span>Mensajes</span>
         </button>
         <button class="bottom-nav-item" data-view="whatsapp">
             <i data-lucide="smartphone"></i>

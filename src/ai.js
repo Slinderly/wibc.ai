@@ -17,6 +17,63 @@ const MAX_HISTORY = 20;
 const lastSystemSentAt = {};
 const SYSTEM_REFRESH_EVERY = 15;
 
+// ── Chat persistence ──────────────────────────────────────────────────────────
+const chatsDir = path.join(__dirname, '../data/chats');
+
+const sanitizeJid = (jid) => jid.replace(/[^a-z0-9]/gi, '_');
+
+const saveChatMessage = (userId, jid, role, text) => {
+    try {
+        const userChatsDir = path.join(chatsDir, userId);
+        if (!fs.existsSync(userChatsDir)) fs.mkdirSync(userChatsDir, { recursive: true });
+        const file = path.join(userChatsDir, `${sanitizeJid(jid)}.json`);
+        let msgs = [];
+        if (fs.existsSync(file)) {
+            try { msgs = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) {}
+        }
+        msgs.push({ role, text, ts: new Date().toISOString(), jid });
+        if (msgs.length > 500) msgs = msgs.slice(-500);
+        fs.writeFileSync(file, JSON.stringify(msgs, null, 2));
+    } catch (e) {
+        console.error('[wibc.ai] saveChatMessage error:', e.message);
+    }
+};
+
+const getChatHistory = (userId, jid) => {
+    try {
+        const file = path.join(chatsDir, userId, `${sanitizeJid(jid)}.json`);
+        if (!fs.existsSync(file)) return [];
+        return JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (_) { return []; }
+};
+
+const listChatContacts = (userId) => {
+    try {
+        const userChatsDir = path.join(chatsDir, userId);
+        if (!fs.existsSync(userChatsDir)) return [];
+        const files = fs.readdirSync(userChatsDir).filter(f => f.endsWith('.json'));
+        const contacts = [];
+        for (const file of files) {
+            try {
+                const msgs = JSON.parse(fs.readFileSync(path.join(userChatsDir, file), 'utf8'));
+                if (!msgs.length) continue;
+                const last = msgs[msgs.length - 1];
+                const jid = last.jid || file.replace('.json', '').replace(/_/g, '');
+                contacts.push({
+                    jid,
+                    phone: '+' + jid.split('@')[0],
+                    lastMessage: last.text,
+                    lastRole: last.role,
+                    lastTs: last.ts,
+                    count: msgs.length,
+                });
+            } catch (_) {}
+        }
+        contacts.sort((a, b) => new Date(b.lastTs) - new Date(a.lastTs));
+        return contacts;
+    } catch (_) { return []; }
+};
+
 const PRODUCT_KEYWORDS = [
     'precio', 'precios', 'producto', 'productos', 'catálogo', 'catalogo',
     'cuánto', 'cuanto', 'vale', 'cuesta', 'costo', 'costos',
@@ -478,4 +535,4 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
     });
 };
 
-module.exports = { generateAIResponse };
+module.exports = { generateAIResponse, saveChatMessage, getChatHistory, listChatContacts };

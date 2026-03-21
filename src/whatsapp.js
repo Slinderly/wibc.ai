@@ -9,7 +9,7 @@ const { Boom } = require('@hapi/boom');
 const pino   = require('pino');
 const path   = require('path');
 const fs     = require('fs');
-const { generateAIResponse } = require('./ai');
+const { generateAIResponse, saveChatMessage } = require('./ai');
 
 // ── Estado global — clave = `${userId}:${sessionId}` ──────────────────────
 const sockets       = {};  // clave → socket
@@ -88,9 +88,14 @@ const buildSocket = async (userId, sessionId) => {
             msg.message.conversation ||
             msg.message.extendedTextMessage?.text || '';
         if (!text) return;
+        const jid = msg.key.remoteJid;
+        saveChatMessage(userId, jid, 'user', text);
         try {
-            const reply = await generateAIResponse(userId, text, msg.key.remoteJid);
-            if (reply) await sock.sendMessage(msg.key.remoteJid, { text: reply });
+            const reply = await generateAIResponse(userId, text, jid);
+            if (reply) {
+                await sock.sendMessage(jid, { text: reply });
+                saveChatMessage(userId, jid, 'bot', reply);
+            }
         } catch (e) { console.error('[wibc.ai] AI error:', e.message); }
     });
 
@@ -358,10 +363,23 @@ const initSessionHandler = (req, res) => {
     res.json({ success: true, sessionId });
 };
 
+const sendMessageToJid = async (userId, jid, text) => {
+    const sessions = [...(userSets[userId] || [])];
+    for (const sessionId of sessions) {
+        const kk = makeKey(userId, sessionId);
+        if (statuses[kk] === 'connected' && sockets[kk]) {
+            await sockets[kk].sendMessage(jid, { text });
+            return;
+        }
+    }
+    throw new Error('No hay una sesión de WhatsApp activa');
+};
+
 module.exports = {
     startBaileys:                connectQR,
     startBaileysWithPairingCode: connectPairing,
     disconnectSession,
+    sendMessageToJid,
     getQRHandler,
     getDevicesHandler,
     initSessionHandler,
