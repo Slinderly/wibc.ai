@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const { GoogleGenAI } = require('@google/genai');
 const {
     getQRHandler, getDevicesHandler, initSessionHandler,
     startBaileysWithPairingCode, disconnectSession
@@ -68,6 +69,44 @@ router.post('/data/:userId', (req, res) => {
         fs.writeFileSync(path.join(userDataDir, `${req.params.userId}.json`), JSON.stringify(req.body, null, 2));
         res.json({ success: true });
     } catch { res.status(500).json({ success: false }); }
+});
+
+// ── Prompt Builder Chat ──
+router.post('/prompt-chat/:userId', async (req, res) => {
+    const f = path.join(userDataDir, `${req.params.userId}.json`);
+    if (!fs.existsSync(f)) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+
+    const userData = JSON.parse(fs.readFileSync(f));
+    const apiKey   = userData.aiConfig?.apiKey;
+    if (!apiKey || !apiKey.trim()) return res.status(400).json({ success: false, message: 'Configura tu API Key primero.' });
+
+    const { message, history = [] } = req.body;
+    if (!message) return res.status(400).json({ success: false });
+
+    const model = (userData.aiConfig?.model?.trim()) || 'gemini-2.5-flash';
+
+    const systemPrompt = `Eres un experto en crear prompts para bots de ventas en WhatsApp. Tu única tarea es ayudar al usuario a crear el prompt perfecto para su bot.
+
+Cuando el usuario describa su negocio o necesidades, genera un prompt de personalidad completo y listo para usar. El prompt debe:
+- Describir la personalidad y tono del bot
+- Incluir instrucciones para recolectar datos del pedido (nombre, dirección, pago)
+- Ser directo y estar en primera persona ("Eres un vendedor de...")
+- Estar escrito en el mismo idioma que el usuario
+
+Si el usuario pide ajustes, modifica el prompt anterior y entrega la versión corregida.
+Responde SOLO con el prompt generado, sin explicaciones adicionales, sin comillas, sin markdown.`;
+
+    const histText = history.map(h => `${h.role === 'user' ? 'Usuario' : 'Asistente'}: ${h.text}`).join('\n');
+    const contents = `${systemPrompt}\n\n${histText ? histText + '\n' : ''}Usuario: ${message}`;
+
+    try {
+        const ai = new GoogleGenAI({ apiKey });
+        const result = await ai.models.generateContent({ model, contents });
+        res.json({ success: true, reply: result.text });
+    } catch (e) {
+        console.error('[wibc.ai] prompt-chat error:', e.message);
+        res.status(500).json({ success: false, message: 'Error al conectar con la IA. Verifica tu API Key.' });
+    }
 });
 
 // ── Orders ──

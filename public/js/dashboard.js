@@ -113,53 +113,107 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── AI Config ──
-    const PROMPT_TEMPLATES = {
-        ventas_general: `Eres un vendedor virtual amable, profesional y entusiasta. Tu objetivo es ayudar al cliente a encontrar el producto ideal, responder sus dudas con claridad y motivarlos a realizar su compra. Siempre saluda con calidez, ofrece alternativas si algo no está disponible y cierra la conversación invitando al cliente a confirmar su pedido. Pide nombre, dirección y método de pago antes de confirmar.`,
-
-        restaurante: `Eres el asistente virtual de nuestro restaurante. Eres amable, rápido y conoces el menú de memoria. Ayuda a los clientes a elegir sus platillos, informa sobre ingredientes si preguntan, toma el pedido completo (platillos, bebidas, acompañamientos), pide la dirección de entrega, el nombre del cliente y el método de pago (efectivo, transferencia o tarjeta). Confirma el pedido antes de cerrarlo.`,
-
-        ropa: `Eres la asistenta de ventas de nuestra tienda de moda. Eres simpática, tienes buen gusto y ayudas a los clientes a elegir outfits perfectos. Pregunta por talla, color preferido y ocasión si hace falta. Cuando el cliente quiera comprar, solicita: nombre completo, dirección de envío, talla confirmada y método de pago. Menciona tiempos de entrega si te preguntan.`,
-
-        belleza: `Eres la recepcionista virtual de nuestro salón de belleza. Eres atenta, elegante y profesional. Puedes agendar citas, informar sobre tratamientos, precios y disponibilidad. Cuando un cliente quiera reservar, pide: nombre, servicio deseado, fecha y hora preferida, y número de teléfono de contacto. Confirma la cita antes de cerrar la conversación.`,
-
-        tecnologia: `Eres el asesor virtual de nuestra tienda de tecnología. Eres técnico pero accesible, explicás las características de los productos de forma clara para cualquier tipo de cliente. Ayudas a comparar productos, resolvés dudas técnicas y guiás la compra. Para confirmar un pedido, solicita: nombre, dirección de entrega, producto(s) elegido(s) y método de pago.`,
-
-        inmobiliaria: `Eres el asesor virtual de nuestra inmobiliaria. Eres profesional, confiable y conoces todas las propiedades disponibles. Escucha las necesidades del cliente (zona, presupuesto, tipo de propiedad), recomienda opciones del catálogo y agenda visitas. Para registrar un interés, pide: nombre completo, teléfono, tipo de propiedad buscada y presupuesto aproximado.`,
-    };
-
     const renderConfigForm = () => {
-        document.getElementById('botMode').value    = userData.botMode;
-        document.getElementById('apiKey').value     = userData.aiConfig.apiKey || '';
-        document.getElementById('aiModel').value    = userData.aiConfig.model || '';
-        document.getElementById('aiPrompt').value   = userData.aiConfig.prompt || '';
-        document.getElementById('aiContext').value  = userData.aiConfig.context || '';
-        // Reset template selector
-        document.getElementById('promptTemplate').value = '';
+        document.getElementById('botMode').value   = userData.botMode;
+        document.getElementById('apiKey').value    = userData.aiConfig.apiKey || '';
+        document.getElementById('aiModel').value   = userData.aiConfig.model || '';
+        document.getElementById('aiPrompt').value  = userData.aiConfig.prompt || '';
+        document.getElementById('aiContext').value = userData.aiConfig.context || '';
     };
 
-    document.getElementById('promptTemplate').addEventListener('change', (e) => {
-        const val = e.target.value;
-        if (!val || val === 'custom') {
-            document.getElementById('aiPrompt').focus();
-            return;
-        }
-        const tpl = PROMPT_TEMPLATES[val];
-        if (tpl) {
-            document.getElementById('aiPrompt').value = tpl;
-            document.getElementById('aiPrompt').focus();
-        }
+    // Form 1: credentials
+    document.getElementById('aiCredForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        userData.botMode = document.getElementById('botMode').value;
+        userData.aiConfig = {
+            ...userData.aiConfig,
+            apiKey: document.getElementById('apiKey').value.trim(),
+            model:  document.getElementById('aiModel').value.trim(),
+        };
+        saveUserData(); showToast('Credenciales guardadas', 'success');
     });
 
-    document.getElementById('aiForm').addEventListener('submit', (e) => {
+    // Form 2: prompt + context
+    document.getElementById('aiPromptForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        userData.botMode  = document.getElementById('botMode').value;
         userData.aiConfig = {
-            apiKey:  document.getElementById('apiKey').value,
-            model:   document.getElementById('aiModel').value.trim(),
+            ...userData.aiConfig,
             prompt:  document.getElementById('aiPrompt').value,
-            context: document.getElementById('aiContext').value
+            context: document.getElementById('aiContext').value,
         };
-        saveUserData(); showToast('Configuración guardada', 'success');
+        saveUserData(); showToast('Personalidad guardada', 'success');
+    });
+
+    // ── Prompt Generator Chat ──
+    let promptGenHistory = [];
+    let promptGenOpen    = false;
+
+    document.getElementById('togglePromptGen').addEventListener('click', () => {
+        promptGenOpen = !promptGenOpen;
+        document.getElementById('promptGenPanel').style.display = promptGenOpen ? 'block' : 'none';
+        document.getElementById('promptGenChevron').style.transform = promptGenOpen ? 'rotate(180deg)' : '';
+        lucide.createIcons();
+    });
+
+    const appendPromptGenMsg = (role, text) => {
+        const chat = document.getElementById('promptGenChat');
+        const div  = document.createElement('div');
+        div.className = `pgc-msg pgc-${role}`;
+
+        if (role === 'ai') {
+            div.innerHTML = `
+                <p class="pgc-text">${text.replace(/\n/g, '<br>')}</p>
+                <button class="pgc-use-btn" onclick="window.useGeneratedPrompt(this)">Usar este prompt</button>`;
+        } else {
+            div.innerHTML = `<p class="pgc-text">${text.replace(/\n/g, '<br>')}</p>`;
+        }
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+    };
+
+    window.useGeneratedPrompt = (btn) => {
+        const text = btn.previousElementSibling.textContent;
+        document.getElementById('aiPrompt').value = text;
+        showToast('Prompt aplicado. Guarda la personalidad para activarlo.', 'success');
+    };
+
+    const sendPromptGen = async () => {
+        const input = document.getElementById('promptGenInput');
+        const msg   = input.value.trim();
+        if (!msg) return;
+
+        const btn = document.getElementById('promptGenSend');
+        btn.disabled = true;
+        input.value  = '';
+
+        appendPromptGenMsg('user', msg);
+
+        try {
+            const res  = await fetch(`/api/prompt-chat/${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg, history: promptGenHistory })
+            });
+            const data = await res.json();
+            if (data.success) {
+                appendPromptGenMsg('ai', data.reply);
+                promptGenHistory.push({ role: 'user', text: msg });
+                promptGenHistory.push({ role: 'ai',   text: data.reply });
+                if (promptGenHistory.length > 20) promptGenHistory = promptGenHistory.slice(-20);
+            } else {
+                appendPromptGenMsg('ai', '⚠️ ' + (data.message || 'Error. Verifica tu API Key en la sección de credenciales.'));
+            }
+        } catch {
+            appendPromptGenMsg('ai', '⚠️ Error de conexión. Intenta de nuevo.');
+        }
+
+        btn.disabled = false;
+        input.focus();
+    };
+
+    document.getElementById('promptGenSend').addEventListener('click', sendPromptGen);
+    document.getElementById('promptGenInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPromptGen(); }
     });
 
     // ── Manual Rules ──

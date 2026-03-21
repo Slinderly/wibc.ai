@@ -60,8 +60,11 @@
         <!-- AI Config View -->
         <section id="view-ai-config" class="view-section">
             <h2>Configuración de IA</h2>
-            <div class="card glassmorphism">
-                <form id="aiForm">
+
+            <!-- Card 1: Credentials -->
+            <div class="card glassmorphism" style="margin-bottom:20px;">
+                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">1 — Conexión con Gemini</h3>
+                <form id="aiCredForm">
                     <div class="input-group">
                         <label for="botMode">Modo del Bot</label>
                         <select id="botMode">
@@ -71,36 +74,50 @@
                     </div>
                     <div class="input-group">
                         <label for="apiKey">API Key de Google Gemini</label>
-                        <input type="text" id="apiKey" placeholder="AIza...">
+                        <input type="text" id="apiKey" placeholder="AIza..." autocomplete="off">
                     </div>
                     <div class="input-group">
                         <label for="aiModel">Modelo de IA</label>
                         <input type="text" id="aiModel" placeholder="gemini-2.5-flash">
-                        <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Déjalo vacío para usar el modelo por defecto (gemini-2.5-flash)</span>
+                        <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Vacío = gemini-2.5-flash por defecto</span>
                     </div>
+                    <button type="submit" class="btn-primary">Guardar credenciales</button>
+                </form>
+            </div>
+
+            <!-- Card 2: Personality -->
+            <div class="card glassmorphism">
+                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">2 — Personalidad del Bot</h3>
+                <form id="aiPromptForm">
                     <div class="input-group">
-                        <label for="promptTemplate">Prompt de ejemplo (opcional)</label>
-                        <select id="promptTemplate">
-                            <option value="">— Elige un ejemplo o escribe el tuyo —</option>
-                            <option value="ventas_general">🛒 Vendedor general amable</option>
-                            <option value="restaurante">🍔 Restaurante / Delivery</option>
-                            <option value="ropa">👗 Tienda de ropa y moda</option>
-                            <option value="belleza">💅 Salón de belleza / Spa</option>
-                            <option value="tecnologia">💻 Tienda de tecnología</option>
-                            <option value="inmobiliaria">🏠 Inmobiliaria / Alquileres</option>
-                            <option value="custom">✏️ Escribir prompt personalizado</option>
-                        </select>
+                        <label for="aiPrompt">Prompt de personalidad</label>
+                        <textarea id="aiPrompt" rows="5" placeholder="Eres un vendedor virtual amable para WhatsApp. Tu objetivo es..."></textarea>
                     </div>
-                    <div class="input-group">
-                        <label for="aiPrompt">Personalidad del Bot</label>
-                        <textarea id="aiPrompt" rows="4" placeholder="Eres un asistente de ventas amable..."></textarea>
-                        <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Puedes editar el texto del ejemplo o escribir el tuyo desde cero.</span>
+
+                    <!-- AI Prompt Generator -->
+                    <div class="prompt-gen-section">
+                        <button type="button" id="togglePromptGen" class="prompt-gen-toggle">
+                            <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+                            Generar prompt con IA
+                            <i data-lucide="chevron-down" id="promptGenChevron" style="width:14px;height:14px;margin-left:auto;transition:transform 0.2s;"></i>
+                        </button>
+                        <div id="promptGenPanel" style="display:none;">
+                            <p class="prompt-gen-hint">Descríbele a la IA tu negocio y qué quieres que haga el bot. Ella va a generar el prompt completo.</p>
+                            <div id="promptGenChat" class="prompt-gen-chat"></div>
+                            <div class="prompt-gen-input-row">
+                                <textarea id="promptGenInput" rows="2" placeholder="Ej: Tengo una tienda de empanadas, quiero que tome pedidos a domicilio..."></textarea>
+                                <button type="button" id="promptGenSend" class="btn-primary" style="width:auto;padding:10px 16px;flex-shrink:0;">
+                                    <i data-lucide="send" style="width:15px;height:15px;"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="aiContext">Contexto / Instrucciones Extra</label>
-                        <textarea id="aiContext" rows="3" placeholder="No ofrezcas descuentos mayores a 10%..."></textarea>
+
+                    <div class="input-group" style="margin-top:16px;">
+                        <label for="aiContext">Instrucciones extra / Restricciones</label>
+                        <textarea id="aiContext" rows="3" placeholder="No ofrezcas descuentos mayores a 10%. Solo atiende de lunes a sábado..."></textarea>
                     </div>
-                    <button type="submit" class="btn-primary">Guardar Configuración</button>
+                    <button type="submit" class="btn-primary">Guardar personalidad</button>
                 </form>
             </div>
         </section>

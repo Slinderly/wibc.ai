@@ -112,7 +112,7 @@ Responde SOLO con el JSON o la palabra null. Sin explicaciones.`;
         // Avoid saving duplicate for same conversation length
         if (orderAlreadySaved(userId, jid, history.length)) return;
 
-        const cleanPhone = jid.replace('@s.whatsapp.net', '').replace('@g.us', '');
+        const cleanPhone = jid.split('@')[0];
 
         const order = {
             id: 'order_' + Date.now(),
@@ -273,7 +273,7 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
 
                 // Async order detection (don't await so we don't slow down the reply)
                 const currentHistory = [...(conversationHistory[histKey] || [])];
-                const cleanPhone = jid.replace('@s.whatsapp.net', '').replace('@g.us', '');
+                const cleanPhone = jid.split('@')[0];
                 detectAndSaveOrder(userId, jid, '+' + cleanPhone, currentHistory, aiConfig)
                     .catch(e => console.error('[wibc.ai] detectOrder error:', e.message));
 
