@@ -5,7 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>wibc.ai - Dashboard</title>
     <link rel="stylesheet" href="/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .view-title { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
+        .view-title h2 { margin-bottom: 0; }
+        .view-subtitle { font-size: 0.82rem; color: var(--text-muted); }
+        .card-section-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .card-section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(157,78,221,0.2);
+        }
+        .prod-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 2fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+        @media (max-width: 640px) {
+            .prod-form-grid { grid-template-columns: 1fr 1fr; }
+            .prod-form-grid .prod-desc-col { grid-column: 1 / -1; }
+            .prod-form-grid button { grid-column: 1 / -1; width: 100%; }
+        }
+        @media (max-width: 400px) {
+            .prod-form-grid { grid-template-columns: 1fr; }
+            .prod-form-grid .prod-desc-col { grid-column: 1; }
+            .prod-form-grid button { grid-column: 1; }
+        }
+        .empty-icon { font-size: 2.5rem; margin-bottom: 6px; opacity: 0.3; }
+    </style>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
 </head>
@@ -48,13 +87,26 @@
 
         <!-- Products View -->
         <section id="view-products" class="view-section active">
-            <h2>Gestión de Productos</h2>
+            <div class="view-title">
+                <h2>Productos</h2>
+                <span class="view-subtitle">Administra el catálogo que verá la IA y tus clientes</span>
+            </div>
             <div class="card glassmorphism">
-                <form id="productForm" class="flex-form">
-                    <input type="text" id="prodName" placeholder="Nombre del producto" required>
-                    <input type="number" id="prodPrice" placeholder="Precio" required>
-                    <input type="text" id="prodDesc" placeholder="Descripción breve" required>
-                    <button type="submit" class="btn-primary">Añadir</button>
+                <div class="card-section-label">Agregar producto</div>
+                <form id="productForm" class="prod-form-grid">
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label>Nombre</label>
+                        <input type="text" id="prodName" placeholder="Ej: Empanada de queso" required>
+                    </div>
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label>Precio</label>
+                        <input type="number" id="prodPrice" placeholder="15.00" required step="0.01" min="0">
+                    </div>
+                    <div class="input-group prod-desc-col" style="margin-bottom:0;">
+                        <label>Descripción</label>
+                        <input type="text" id="prodDesc" placeholder="Breve descripción del producto" required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width:auto;padding:12px 20px;white-space:nowrap;">+ Añadir</button>
                 </form>
             </div>
             <div id="productsList" class="products-grid"></div>
@@ -62,10 +114,13 @@
 
         <!-- AI Config View -->
         <section id="view-ai-config" class="view-section">
-            <h2>Configuración de IA</h2>
+            <div class="view-title">
+                <h2>Inteligencia Artificial</h2>
+                <span class="view-subtitle">Conecta Gemini y define la personalidad del bot</span>
+            </div>
 
             <div class="card glassmorphism" style="margin-bottom:20px;">
-                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">1 — Conexión con Gemini</h3>
+                <div class="card-section-label">Conexión con Gemini</div>
                 <form id="aiCredForm">
                     <div class="input-group">
                         <label for="botMode">Modo del Bot</label>
@@ -88,7 +143,7 @@
             </div>
 
             <div class="card glassmorphism">
-                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:14px;color:var(--text-muted);">2 — Personalidad del Bot</h3>
+                <div class="card-section-label">Personalidad del Bot</div>
 
                 <div class="prompt-mode-tabs">
                     <button type="button" class="prompt-mode-tab active" data-mode="wizard">
@@ -193,11 +248,13 @@
 
         <!-- Flows View -->
         <section id="view-flows" class="view-section">
-            <h2>Automatización</h2>
-            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:20px;">Crea flujos de conversación inteligentes: muestra productos, recolecta datos, registra pedidos y más.</p>
+            <div class="view-title">
+                <h2>Automatización</h2>
+                <span class="view-subtitle">Flujos de conversación: muestra productos, recolecta datos y más</span>
+            </div>
 
             <div class="section-header" style="margin-bottom:16px;">
-                <h3 style="font-size:0.95rem;font-weight:600;">Tus flujos</h3>
+                <h3 style="font-size:0.93rem;font-weight:600;color:var(--text-muted);">Tus flujos</h3>
                 <button id="newFlowBtn" class="btn-icon-label">
                     <i data-lucide="plus-circle"></i> Nuevo flujo
                 </button>
@@ -207,27 +264,31 @@
 
         <!-- Orders View -->
         <section id="view-orders" class="view-section">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-                <h2 style="margin-bottom:0;">Pedidos</h2>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <select id="orderStatusFilter" style="width:auto;padding:8px 12px;font-size:0.85rem;">
-                        <option value="">Todos los estados</option>
-                        <option value="pending">Pendiente</option>
-                        <option value="confirmed">Confirmado</option>
-                        <option value="delivered">Entregado</option>
-                        <option value="cancelled">Cancelado</option>
-                    </select>
-                    <button id="refreshOrdersBtn" class="btn-icon-label">
-                        <i data-lucide="refresh-cw"></i> Actualizar
-                    </button>
-                </div>
+            <div class="view-title">
+                <h2>Pedidos</h2>
+                <span class="view-subtitle">Pedidos detectados automáticamente por la IA</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:18px;gap:8px;flex-wrap:wrap;">
+                <select id="orderStatusFilter" style="width:auto;padding:9px 12px;font-size:0.84rem;">
+                    <option value="">Todos los estados</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="confirmed">Confirmado</option>
+                    <option value="delivered">Entregado</option>
+                    <option value="cancelled">Cancelado</option>
+                </select>
+                <button id="refreshOrdersBtn" class="btn-icon-label">
+                    <i data-lucide="refresh-cw"></i> Actualizar
+                </button>
             </div>
             <div id="ordersList"></div>
         </section>
 
         <!-- WhatsApp View -->
         <section id="view-whatsapp" class="view-section">
-            <h2>WhatsApp</h2>
+            <div class="view-title">
+                <h2>WhatsApp</h2>
+                <span class="view-subtitle">Conecta y administra tus dispositivos de WhatsApp</span>
+            </div>
 
             <div class="card glassmorphism" id="devicesCard">
                 <div class="section-header">
@@ -329,7 +390,10 @@
 
         <!-- Profile View -->
         <section id="view-profile" class="view-section">
-            <h2>Mi Perfil</h2>
+            <div class="view-title">
+                <h2>Mi Perfil</h2>
+                <span class="view-subtitle">Gestiona tu cuenta y credenciales de acceso</span>
+            </div>
 
             <div class="card glassmorphism profile-info-card" style="margin-bottom:20px;">
                 <div class="profile-avatar-row">
@@ -342,7 +406,7 @@
             </div>
 
             <div class="card glassmorphism" style="margin-bottom:20px;">
-                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">Cambiar nombre de usuario</h3>
+                <div class="card-section-label">Cambiar nombre de usuario</div>
                 <form id="changeUsernameForm">
                     <div class="input-group">
                         <label>Nuevo nombre de usuario</label>
@@ -358,7 +422,7 @@
             </div>
 
             <div class="card glassmorphism">
-                <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);">Cambiar contraseña</h3>
+                <div class="card-section-label">Cambiar contraseña</div>
                 <form id="changePasswordForm">
                     <div class="input-group">
                         <label>Contraseña actual</label>
