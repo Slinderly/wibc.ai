@@ -254,9 +254,11 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                 if (shouldIncludeProducts && products && products.length > 0) {
                     contents += `[CATÁLOGO DE PRODUCTOS]\n`;
                     products.forEach(p => {
-                        let line = `- ${p.name}: ${p.price}`;
-                        if (p.description && p.description.trim()) line += ` — ${p.description}`;
-                        contents += line + '\n';
+                        contents += `Producto: ${p.name} | Precio: ${p.price}`;
+                        if (p.description && p.description.trim()) {
+                            contents += ` | Descripción: ${p.description}`;
+                        }
+                        contents += '\n';
                     });
                     contents += `[FIN CATÁLOGO]\n\n`;
                 }

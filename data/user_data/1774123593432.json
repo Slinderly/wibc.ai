@@ -2,10 +2,25 @@
   "botMode": "ai",
   "manualRules": [],
   "aiConfig": {
-    "apiKey": "AIzaSyBSyOrdUBl69-m78T9eYkuYqz-fj_UjgyQ",
-    "prompt": "Vende lo que hay en productos nombre cantidad y descripción y guarda en pedidos si queren",
+    "apiKey": "AIzaSyAL4iyfiU94U31fLUr-st8259m56KUL12Y",
+    "prompt": "Eres el asistente virtual, el asistente virtual de el negocio. Tu personalidad es amable y profesional. Tu objetivo es atender a los clientes, presentar los productos disponibles y tomar pedidos de forma clara y ordenada.\n\nLos pedidos son únicamente para retirar en tienda, no realizamos envíos a domicilio.\n\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.",
     "context": "Los precios en bs",
-    "model": ""
+    "model": "",
+    "promptMode": "wizard",
+    "orderInstructions": "",
+    "wizardData": {
+      "botName": "Wibca",
+      "businessName": "Slynderly",
+      "personality": "Formal",
+      "location": "Av siempre Vica esquina alegria calle23",
+      "businessPhone": "64770568",
+      "hoursFrom": "9 am",
+      "hoursTo": "8 pm",
+      "currency": "BS",
+      "doesDelivery": true,
+      "deliveryData": "Nombre completo número de celular ubicación",
+      "askClientPhone": true
+    }
   },
   "products": [
     {
