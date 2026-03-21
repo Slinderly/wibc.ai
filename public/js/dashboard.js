@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
             b.classList.toggle('active', b.dataset.view === viewName));
         if (viewName === 'profile') loadProfile();
         if (viewName === 'flows') renderFlows();
+        if (viewName === 'orders') fetchOrders();
         if (viewName === 'chats') {
             loadChatContacts();
             // On mobile: show contacts panel, hide chat window
@@ -819,6 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pending:   { label: 'Pendiente',  cls: 'status-pending' },
         confirmed: { label: 'Confirmado', cls: 'status-confirmed' },
         delivered: { label: 'Entregado',  cls: 'status-delivered' },
+        completed: { label: 'Realizado',  cls: 'status-completed' },
         cancelled: { label: 'Cancelado',  cls: 'status-cancelled' },
     };
 
@@ -875,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <option value="pending"   ${order.status==='pending'   ? 'selected':''}>Pendiente</option>
                         <option value="confirmed" ${order.status==='confirmed' ? 'selected':''}>Confirmado</option>
                         <option value="delivered" ${order.status==='delivered' ? 'selected':''}>Entregado</option>
+                        <option value="completed" ${order.status==='completed' ? 'selected':''}>Realizado</option>
                         <option value="cancelled" ${order.status==='cancelled' ? 'selected':''}>Cancelado</option>
                     </select>
                     ${order.jid ? `<button class="btn-secondary order-chat-btn" data-jid="${order.jid}" data-phone="${order.phone || ''}" style="width:auto;padding:7px 12px;font-size:0.8rem;display:flex;align-items:center;gap:5px;"><i data-lucide="message-circle" style="width:13px;height:13px;"></i>Chat</button>` : ''}
@@ -889,15 +892,22 @@ document.addEventListener('DOMContentLoaded', () => {
         list.querySelectorAll('.order-status-select').forEach(sel => {
             sel.addEventListener('change', async () => {
                 const id = sel.dataset.id;
-                await fetch(`/api/orders/${userId}/${id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: sel.value })
-                });
-                const order = allOrders.find(o => o.id === id);
-                if (order) order.status = sel.value;
-                renderOrders();
-                showToast('Estado actualizado', 'success');
+                const newStatus = sel.value;
+                try {
+                    const res = await fetch(`/api/orders/${userId}/${id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+                    if (!res.ok) throw new Error('Error al guardar');
+                    const order = allOrders.find(o => o.id === id);
+                    if (order) order.status = newStatus;
+                    renderOrders();
+                    showToast('Estado actualizado', 'success');
+                } catch (e) {
+                    showToast('Error al actualizar el estado', 'error');
+                    renderOrders();
+                }
             });
         });
 

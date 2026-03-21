@@ -1085,6 +1085,7 @@ h2 {
 .status-pending   { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.28); }
 .status-confirmed { background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.28); }
 .status-delivered { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.28); }
+.status-completed { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.28); }
 .status-cancelled { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.28); }
 
 .order-items { display: flex; flex-wrap: wrap; gap: 5px; }
