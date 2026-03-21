@@ -605,7 +605,134 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('retryPhoneBtn').addEventListener('click', resetPhonePanel);
 
+    // ── Orders ──────────────────────────────────────────────────────────────
+    let allOrders = [];
+
+    const STATUS_LABELS = {
+        pending:   { label: 'Pendiente',  cls: 'status-pending' },
+        confirmed: { label: 'Confirmado', cls: 'status-confirmed' },
+        delivered: { label: 'Entregado',  cls: 'status-delivered' },
+        cancelled: { label: 'Cancelado',  cls: 'status-cancelled' },
+    };
+
+    const formatOrderDate = (iso) => {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+    };
+
+    const renderOrders = () => {
+        const list   = document.getElementById('ordersList');
+        const filter = document.getElementById('orderStatusFilter').value;
+        const orders = filter ? allOrders.filter(o => o.status === filter) : allOrders;
+
+        if (!orders.length) {
+            list.innerHTML = `<div class="orders-empty">
+                <i data-lucide="inbox" style="width:40px;height:40px;stroke-width:1.5;color:var(--text-muted);margin-bottom:12px;"></i>
+                <p>No hay pedidos aún.</p>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-top:6px;">Los pedidos que detecte la IA aparecerán aquí automáticamente.</p>
+            </div>`;
+            lucide.createIcons();
+            return;
+        }
+
+        list.innerHTML = '';
+        orders.forEach(order => {
+            const st    = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
+            const items = (order.items || []).map(i =>
+                `<span class="order-item-tag">${i.quantity ? i.quantity + 'x ' : ''}${i.name}${i.price ? ' ($' + i.price + ')' : ''}</span>`
+            ).join('');
+
+            const card = document.createElement('div');
+            card.className = 'order-card glassmorphism';
+            card.innerHTML = `
+                <div class="order-card-header">
+                    <div class="order-phone-block">
+                        <i data-lucide="message-circle" style="width:15px;height:15px;flex-shrink:0;"></i>
+                        <span class="order-phone">${order.phone || '—'}</span>
+                        ${order.customerName ? `<span class="order-name">${order.customerName}</span>` : ''}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                        <span class="order-status-badge ${st.cls}">${st.label}</span>
+                        <span class="order-time">${formatOrderDate(order.timestamp)}</span>
+                    </div>
+                </div>
+
+                ${items ? `<div class="order-items">${items}</div>` : ''}
+
+                <div class="order-details-grid">
+                    ${order.address       ? `<div class="order-detail"><i data-lucide="map-pin" style="width:13px;height:13px;"></i><span>${order.address}</span></div>` : ''}
+                    ${order.paymentMethod ? `<div class="order-detail"><i data-lucide="credit-card" style="width:13px;height:13px;"></i><span>${order.paymentMethod}</span></div>` : ''}
+                    ${order.total         ? `<div class="order-detail"><i data-lucide="dollar-sign" style="width:13px;height:13px;"></i><span>Total: <strong>${order.total}</strong></span></div>` : ''}
+                    ${order.notes         ? `<div class="order-detail" style="grid-column:1/-1;"><i data-lucide="file-text" style="width:13px;height:13px;"></i><span>${order.notes}</span></div>` : ''}
+                </div>
+
+                <div class="order-actions">
+                    <select class="order-status-select" data-id="${order.id}">
+                        <option value="pending"   ${order.status==='pending'   ? 'selected':''}>Pendiente</option>
+                        <option value="confirmed" ${order.status==='confirmed' ? 'selected':''}>Confirmado</option>
+                        <option value="delivered" ${order.status==='delivered' ? 'selected':''}>Entregado</option>
+                        <option value="cancelled" ${order.status==='cancelled' ? 'selected':''}>Cancelado</option>
+                    </select>
+                    <button class="btn-danger order-delete-btn" data-id="${order.id}" style="width:auto;padding:7px 14px;font-size:0.8rem;">Eliminar</button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+
+        lucide.createIcons();
+
+        list.querySelectorAll('.order-status-select').forEach(sel => {
+            sel.addEventListener('change', async () => {
+                const id = sel.dataset.id;
+                await fetch(`/api/orders/${userId}/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: sel.value })
+                });
+                const order = allOrders.find(o => o.id === id);
+                if (order) order.status = sel.value;
+                renderOrders();
+                showToast('Estado actualizado', 'success');
+            });
+        });
+
+        list.querySelectorAll('.order-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('¿Eliminar este pedido?')) return;
+                const id = btn.dataset.id;
+                await fetch(`/api/orders/${userId}/${id}`, { method: 'DELETE' });
+                allOrders = allOrders.filter(o => o.id !== id);
+                renderOrders();
+                showToast('Pedido eliminado');
+            });
+        });
+    };
+
+    const fetchOrders = async () => {
+        try {
+            const res = await fetch(`/api/orders/${userId}`);
+            if (res.ok) {
+                const data = await res.json();
+                allOrders = data.orders || [];
+                renderOrders();
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    document.getElementById('orderStatusFilter').addEventListener('change', renderOrders);
+    document.getElementById('refreshOrdersBtn').addEventListener('click', () => {
+        fetchOrders();
+        showToast('Actualizando pedidos...');
+    });
+
+    // Auto-refresh orders every 30s when on orders view
+    setInterval(() => {
+        const ordersSection = document.getElementById('view-orders');
+        if (ordersSection && ordersSection.classList.contains('active')) fetchOrders();
+    }, 30000);
+
     // ── Init ──
     fetchUserData();
     fetchDevices();
+    fetchOrders();
 });

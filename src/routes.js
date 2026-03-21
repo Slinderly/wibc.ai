@@ -70,6 +70,44 @@ router.post('/data/:userId', (req, res) => {
     } catch { res.status(500).json({ success: false }); }
 });
 
+// ── Orders ──
+const ordersDir = path.join(dataDir, 'orders');
+
+router.get('/orders/:userId', (req, res) => {
+    const f = path.join(ordersDir, `${req.params.userId}.json`);
+    if (!fs.existsSync(f)) return res.json({ orders: [] });
+    try {
+        const orders = JSON.parse(fs.readFileSync(f));
+        // Remove internal field before sending
+        const clean = orders.map(({ _historyLength, ...o }) => o);
+        res.json({ orders: clean.reverse() });
+    } catch { res.json({ orders: [] }); }
+});
+
+router.patch('/orders/:userId/:orderId', (req, res) => {
+    const f = path.join(ordersDir, `${req.params.userId}.json`);
+    if (!fs.existsSync(f)) return res.status(404).json({ success: false });
+    try {
+        let orders = JSON.parse(fs.readFileSync(f));
+        const idx = orders.findIndex(o => o.id === req.params.orderId);
+        if (idx === -1) return res.status(404).json({ success: false });
+        orders[idx] = { ...orders[idx], ...req.body };
+        fs.writeFileSync(f, JSON.stringify(orders, null, 2));
+        res.json({ success: true });
+    } catch { res.status(500).json({ success: false }); }
+});
+
+router.delete('/orders/:userId/:orderId', (req, res) => {
+    const f = path.join(ordersDir, `${req.params.userId}.json`);
+    if (!fs.existsSync(f)) return res.status(404).json({ success: false });
+    try {
+        let orders = JSON.parse(fs.readFileSync(f));
+        orders = orders.filter(o => o.id !== req.params.orderId);
+        fs.writeFileSync(f, JSON.stringify(orders, null, 2));
+        res.json({ success: true });
+    } catch { res.status(500).json({ success: false }); }
+});
+
 // ── WhatsApp ──
 router.get('/qr/:userId/:sessionId', getQRHandler);
 router.get('/devices/:userId', getDevicesHandler);

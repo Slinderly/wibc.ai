@@ -24,6 +24,9 @@
             <li data-view="manual-bot">
                 <i data-lucide="zap"></i><span>Automatización</span>
             </li>
+            <li data-view="orders">
+                <i data-lucide="clipboard-list"></i><span>Pedidos</span>
+            </li>
             <li data-view="whatsapp">
                 <i data-lucide="smartphone"></i><span>WhatsApp</span>
             </li>
@@ -122,6 +125,26 @@
                 </div>
                 <div id="flowsList"></div>
             </div>
+        </section>
+
+        <!-- Orders View -->
+        <section id="view-orders" class="view-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                <h2 style="margin-bottom:0;">Pedidos</h2>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <select id="orderStatusFilter" style="width:auto;padding:8px 12px;font-size:0.85rem;">
+                        <option value="">Todos los estados</option>
+                        <option value="pending">Pendiente</option>
+                        <option value="confirmed">Confirmado</option>
+                        <option value="delivered">Entregado</option>
+                        <option value="cancelled">Cancelado</option>
+                    </select>
+                    <button id="refreshOrdersBtn" class="btn-icon-label">
+                        <i data-lucide="refresh-cw"></i> Actualizar
+                    </button>
+                </div>
+            </div>
+            <div id="ordersList"></div>
         </section>
 
         <!-- WhatsApp View -->
@@ -250,6 +273,10 @@
         <button class="bottom-nav-item" data-view="manual-bot">
             <i data-lucide="zap"></i>
             <span>Flujos</span>
+        </button>
+        <button class="bottom-nav-item" data-view="orders">
+            <i data-lucide="clipboard-list"></i>
+            <span>Pedidos</span>
         </button>
         <button class="bottom-nav-item" data-view="whatsapp">
             <i data-lucide="smartphone"></i>
