@@ -11,6 +11,27 @@ const flowState = {};
 const conversationHistory = {};
 const MAX_HISTORY = 20;
 
+// Track at which history length the system prompt was last sent per conversation
+// key: `${userId}:${jid}` → number (history.length when system was last sent)
+const lastSystemSentAt = {};
+const SYSTEM_REFRESH_EVERY = 15; // re-send system prompt every N messages
+
+// Keywords that imply the user is asking about products / prices
+const PRODUCT_KEYWORDS = [
+    'precio', 'precios', 'producto', 'productos', 'catálogo', 'catalogo',
+    'cuánto', 'cuanto', 'vale', 'cuesta', 'costo', 'costos',
+    'vendes', 'tienes', 'disponible', 'disponibles', 'oferta', 'ofertas',
+    'comprar', 'pedir', 'pedido', 'lista', 'qué hay', 'que hay',
+    'menú', 'menu', 'opciones', 'stock', 'artículo', 'articulo',
+    'información', 'informacion', 'info', 'detalle', 'detalles',
+    'qué vendes', 'que vendes', 'qué tienen', 'que tienen', 'show me',
+];
+
+const messageNeedsProducts = (text) => {
+    const lower = text.toLowerCase();
+    return PRODUCT_KEYWORDS.some(kw => lower.includes(kw));
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const addToHistory = (key, role, text) => {
@@ -197,39 +218,54 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                 const model = (aiConfig.model && aiConfig.model.trim()) ? aiConfig.model.trim() : 'gemini-2.5-flash';
                 const histKey = `${userId}:${jid}`;
 
+                const currentLen = (conversationHistory[histKey] || []).length;
+                const isFirstMessage = currentLen === 0;
+                const messagesSinceSystem = currentLen - (lastSystemSentAt[histKey] ?? -SYSTEM_REFRESH_EVERY);
+                const shouldSendSystem = isFirstMessage || messagesSinceSystem >= SYSTEM_REFRESH_EVERY;
+                const shouldIncludeProducts = isFirstMessage || messageNeedsProducts(incomingMessage);
+
                 // Add incoming message to history
                 addToHistory(histKey, 'user', incomingMessage);
 
-                // Build conversation history string
+                // Build conversation history string (excluding current message)
                 const historyText = (conversationHistory[histKey] || [])
-                    .slice(0, -1) // exclude current message (already in contents)
+                    .slice(0, -1)
                     .map(h => `${h.role === 'user' ? 'Cliente' : 'Bot'}: ${h.text}`)
                     .join('\n');
 
-                let systemInstruction = `Eres un asistente virtual de ventas para WhatsApp.\n`;
-                systemInstruction += `Personalidad / Prompt principal: ${aiConfig.prompt}\n`;
-                systemInstruction += `Instrucciones estrictas / Contexto: ${aiConfig.context || 'Ninguno'}\n\n`;
-                systemInstruction += `Catálogo de Productos Disponibles:\n`;
+                let contents = '';
 
-                if (products && products.length > 0) {
+                // ── System prompt block (only when needed) ──
+                if (shouldSendSystem) {
+                    contents += `[INSTRUCCIONES DEL SISTEMA]\n`;
+                    contents += `Eres un asistente virtual de ventas para WhatsApp. Responde siempre en el idioma del cliente.\n`;
+                    contents += `Personalidad: ${aiConfig.prompt || 'Eres un vendedor amable y profesional.'}\n`;
+                    if (aiConfig.context && aiConfig.context.trim()) {
+                        contents += `Instrucciones estrictas: ${aiConfig.context}\n`;
+                    }
+                    contents += `Si preguntan por productos/precios y no los recuerdas, diles que con gusto te los comparten si preguntan.\n`;
+                    contents += `[FIN INSTRUCCIONES]\n\n`;
+                    lastSystemSentAt[histKey] = (conversationHistory[histKey] || []).length;
+                }
+
+                // ── Product catalog block (only when relevant) ──
+                if (shouldIncludeProducts && products && products.length > 0) {
+                    contents += `[CATÁLOGO DE PRODUCTOS]\n`;
                     products.forEach(p => {
-                        systemInstruction += `- ${p.name}: $${p.price} (${p.description})\n`;
+                        contents += `- ${p.name}: $${p.price} — ${p.description}\n`;
                     });
-                } else {
-                    systemInstruction += `- No hay productos en inventario por ahora.\n`;
+                    contents += `[FIN CATÁLOGO]\n\n`;
                 }
 
+                // ── Conversation history ──
                 if (historyText) {
-                    systemInstruction += `\nHistorial reciente de conversación:\n${historyText}\n`;
+                    contents += `[CONVERSACIÓN ANTERIOR]\n${historyText}\n[FIN CONVERSACIÓN]\n\n`;
                 }
 
-                systemInstruction += `\nEl usuario acaba de decir: "${incomingMessage}"`;
+                // ── Current message ──
+                contents += `Cliente: ${incomingMessage}`;
 
-                const response = await ai.models.generateContent({
-                    model,
-                    contents: systemInstruction,
-                });
-
+                const response = await ai.models.generateContent({ model, contents });
                 const reply = response.text;
 
                 // Add bot response to history

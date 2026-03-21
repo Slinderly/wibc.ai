@@ -79,8 +79,22 @@
                         <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Déjalo vacío para usar el modelo por defecto (gemini-2.5-flash)</span>
                     </div>
                     <div class="input-group">
+                        <label for="promptTemplate">Prompt de ejemplo (opcional)</label>
+                        <select id="promptTemplate">
+                            <option value="">— Elige un ejemplo o escribe el tuyo —</option>
+                            <option value="ventas_general">🛒 Vendedor general amable</option>
+                            <option value="restaurante">🍔 Restaurante / Delivery</option>
+                            <option value="ropa">👗 Tienda de ropa y moda</option>
+                            <option value="belleza">💅 Salón de belleza / Spa</option>
+                            <option value="tecnologia">💻 Tienda de tecnología</option>
+                            <option value="inmobiliaria">🏠 Inmobiliaria / Alquileres</option>
+                            <option value="custom">✏️ Escribir prompt personalizado</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
                         <label for="aiPrompt">Personalidad del Bot</label>
                         <textarea id="aiPrompt" rows="4" placeholder="Eres un asistente de ventas amable..."></textarea>
+                        <span style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Puedes editar el texto del ejemplo o escribir el tuyo desde cero.</span>
                     </div>
                     <div class="input-group">
                         <label for="aiContext">Contexto / Instrucciones Extra</label>

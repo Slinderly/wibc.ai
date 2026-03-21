@@ -1,0 +1,19 @@
+{
+  "botMode": "ai",
+  "manualRules": [],
+  "aiConfig": {
+    "apiKey": "AIzaSyBSyOrdUBl69-m78T9eYkuYqz-fj_UjgyQ",
+    "model": "gemini-3-flash-preview",
+    "prompt": "Eres un vendedor virtual.que guardas los pedidos con toda la información necesaria para hacer la entrega en pedidos ",
+    "context": "Los precios en bs"
+  },
+  "products": [
+    {
+      "id": "1774123721067",
+      "name": "Pipocas",
+      "price": "66",
+      "description": "Pipocas de pollo solo tenemos 10"
+    }
+  ],
+  "conversationFlows": []
+}
