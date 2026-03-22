@@ -292,5 +292,53 @@
     "text": "¡Comprendo perfectamente! No hay ningún problema.\n\nLamento que ya no desee continuar con el pedido, pero entiendo que a veces las decisiones cambian.\n\n**Su pedido de 1 unidad de Pipocas de pollo ha sido cancelado exitosamente.**\n\nNo se preocupe, aquí estamos para cuando decida realizar una compra. Si en el futuro se le antoja algo o tiene alguna otra pregunta, no dude en contactarnos.\n\n¡Que tenga un excelente día!",
     "ts": "2026-03-22T01:04:38.377Z",
     "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Quero que canceles todos mis pedidos",
+    "ts": "2026-03-22T01:17:18.518Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-22T01:17:19.383Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-22T01:18:56.832Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Olá! Você pode cancelar seus pedidos em até 5 minutos após a realização. Por favor, entre em contato diretamente com o número **64770568** para processar o cancelamento. Estou à disposição!",
+    "ts": "2026-03-22T01:19:00.275Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Quero cancelar mi pedido",
+    "ts": "2026-03-22T01:19:11.512Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Com certeza. Os cancelamentos são aceitos em até 5 minutos após o pedido. Por favor, entre em contato direto pelo telefone **64770568** para solicitar o cancelamento. Estou à disposição!",
+    "ts": "2026-03-22T01:19:14.297Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "A la español",
+    "ts": "2026-03-22T01:19:20.445Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "¡Claro que sí! Con gusto te ayudo en español.\n\nSi deseas cancelar tu pedido, recuerda que tienes 5 minutos para hacerlo contactando directamente al **64770568**. ¿Hay algo más en lo que pueda ayudarte?",
+    "ts": "2026-03-22T01:19:23.447Z",
+    "jid": "70021388726299@lid"
   }
 ]

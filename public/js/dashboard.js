@@ -116,7 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const botName  = w.botName      || 'el asistente virtual';
         const bizName  = w.businessName || 'el negocio';
         const persona  = w.personality  || 'amable y profesional';
-        let p = `Eres ${botName}, el asistente virtual de ${bizName}. Tu personalidad es ${persona}. Tu objetivo es atender a los clientes, presentar los productos disponibles y tomar pedidos de forma clara y ordenada.\n\n`;
+        const langLine = w.defaultLanguage
+            ? `Responde SIEMPRE en ${w.defaultLanguage}, sin importar en qué idioma te escriba el cliente.`
+            : `Responde siempre en el idioma en que te escriba el cliente.`;
+        let p = `Eres ${botName}, el asistente virtual de ${bizName}. Tu personalidad es ${persona}. Tu objetivo es atender a los clientes, presentar los productos disponibles y tomar pedidos de forma clara y ordenada. ${langLine}\n\n`;
         if (w.doesDelivery) {
             const data = w.deliveryData || 'nombre completo, dirección, referencia';
             p += `Realizamos envíos a domicilio. Para coordinar cualquier pedido con envío, solicita siempre al cliente: ${data}.\n`;
@@ -165,9 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('wAcceptsReturns').checked  = !!w.acceptsReturns;
         document.getElementById('wDeliveryRow').style.display = w.doesDelivery ? 'block' : 'none';
         document.getElementById('wReturnsRow').style.display  = w.acceptsReturns ? 'block' : 'none';
-        document.getElementById('wDeliveryData').value   = w.deliveryData   || '';
-        document.getElementById('wReturnDeadline').value = w.returnDeadline || '';
-        document.getElementById('wResponseLength').value = w.responseLength || 'medium';
+        document.getElementById('wDeliveryData').value    = w.deliveryData    || '';
+        document.getElementById('wReturnDeadline').value  = w.returnDeadline  || '';
+        document.getElementById('wDefaultLanguage').value = w.defaultLanguage || '';
+        document.getElementById('wResponseLength').value  = w.responseLength  || 'medium';
     };
 
     const setPromptMode = (mode) => {
@@ -201,9 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
         doesDelivery:   document.getElementById('wDoesDelivery').checked,
         deliveryData:   document.getElementById('wDeliveryData').value.trim(),
         askClientPhone: document.getElementById('wAskClientPhone').checked,
-        acceptsReturns: document.getElementById('wAcceptsReturns').checked,
-        returnDeadline: document.getElementById('wReturnDeadline').value.trim(),
-        responseLength: document.getElementById('wResponseLength').value,
+        acceptsReturns:  document.getElementById('wAcceptsReturns').checked,
+        returnDeadline:  document.getElementById('wReturnDeadline').value.trim(),
+        defaultLanguage: document.getElementById('wDefaultLanguage').value,
+        responseLength:  document.getElementById('wResponseLength').value,
     });
 
     document.getElementById('wizardPreviewBtn').addEventListener('click', () => {

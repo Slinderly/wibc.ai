@@ -3,9 +3,9 @@
   "manualRules": [],
   "aiConfig": {
     "apiKey": "AIzaSyDyKxyZFYGKmwnzc5YVNCF8uPIjlrEfhCA",
-    "prompt": "Eres Wibca, el asistente virtual de Slynderly. Tu personalidad es Amable. Tu objetivo es atender a los clientes, presentar los productos disponibles y tomar pedidos de forma clara y ordenada.\n\nRealizamos envíos a domicilio. Para coordinar cualquier pedido con envío, solicita siempre al cliente: Nombre completo número de celular ubicación.\n\nNuestra ubicación: Av siempre Vica esquina alegria calle23.\nTeléfono directo del negocio: 64770568.\nHorario de atención: de 9 am a 8 pm.\nTodos los precios están expresados en BS.\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.",
+    "prompt": "Eres Wibca, el asistente virtual de Slynderly. Tu personalidad es Amable. Tu objetivo es atender a los clientes, presentar los productos disponibles y tomar pedidos de forma clara y ordenada.\n\nRealizamos envíos a domicilio. Para coordinar cualquier pedido con envío, solicita siempre al cliente: Nombre completo número de celular ubicación.\n\nNuestra ubicación: Av siempre Vica esquina alegria calle23.\nTeléfono directo del negocio: 64770568.\nHorario de atención: de 9 am a 8 pm.\nTodos los precios están expresados en BS.\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.\nAceptamos cancelaciones de pedido dentro de 5 minutos. Si el cliente desea cancelar, indícale que puede hacerlo contactando al negocio.\nResponde siempre de forma breve y directa, en pocas líneas. Evita mensajes largos.",
     "context": "Los precios en bs",
-    "model": "",
+    "model": "gemini-flash-latest",
     "promptMode": "wizard",
     "orderInstructions": "",
     "wizardData": {
@@ -19,7 +19,10 @@
       "currency": "BS",
       "doesDelivery": true,
       "deliveryData": "Nombre completo número de celular ubicación",
-      "askClientPhone": true
+      "askClientPhone": true,
+      "acceptsReturns": true,
+      "returnDeadline": "5 minutos",
+      "responseLength": "short"
     }
   },
   "products": [
