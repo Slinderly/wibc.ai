@@ -150,24 +150,15 @@ const detectAndSaveOrder = async (userId, jid, phone, history, aiConfig) => {
         .map(h => `${h.role === 'user' ? 'Cliente' : 'Bot'}: ${h.text}`)
         .join('\n');
 
-    const detectionPrompt = `Analiza esta conversación de WhatsApp entre un cliente y un bot de ventas.
-
-Conversación:
+    const detectionPrompt = `Chat de ventas WhatsApp:
 ${historyText}
 
-Tu tarea: Determina si en esta conversación el cliente ha CONFIRMADO un pedido/compra (no solo preguntó precios). Si se confirmó un pedido, extrae los datos en formato JSON. Si NO hay pedido confirmado, responde exactamente con la palabra: null
+¿El cliente CONFIRMÓ un pedido (no solo consultó)? Sí→JSON, No→null
 
-Si hay pedido, responde SOLO con JSON válido con esta estructura exacta (omite campos que no se mencionaron, déjalos como null):
-{
-  "customerName": "nombre del cliente o null",
-  "address": "dirección de entrega o null",
-  "items": [{"name": "producto", "quantity": "cantidad", "price": "precio"}],
-  "paymentMethod": "método de pago o null",
-  "total": "total del pedido o null",
-  "notes": "notas adicionales o null"
-}
+JSON si hay pedido:
+{"customerName":null,"address":null,"items":[{"name":"","quantity":"","price":""}],"paymentMethod":null,"total":null,"notes":null}
 
-Responde SOLO con el JSON o la palabra null. Sin explicaciones.`;
+Solo JSON o null. Sin texto extra.`;
 
     try {
         const model = (aiConfig.model && aiConfig.model.trim()) ? aiConfig.model.trim() : 'gemini-2.5-flash';
@@ -218,12 +209,10 @@ const detectAndCancelOrder = async (userId, jid, history, aiConfig) => {
         .map(h => `${h.role === 'user' ? 'Cliente' : 'Bot'}: ${h.text}`)
         .join('\n');
 
-    const cancelPrompt = `Analiza los últimos mensajes de esta conversación de WhatsApp.
-
-Conversación:
+    const cancelPrompt = `Mensajes:
 ${historyText}
 
-Tu tarea: ¿El cliente está CANCELANDO o pidiendo ELIMINAR su pedido? Responde únicamente con: SI o NO. Sin explicaciones.`;
+¿El cliente cancela su pedido? SI o NO.`;
 
     try {
         const model = (aiConfig.model && aiConfig.model.trim()) ? aiConfig.model.trim() : 'gemini-2.5-flash';
@@ -521,16 +510,15 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                     !(conversationHistory[histKey] || []).length;
 
                 // ── Build system instruction (separate from conversation) ──────
-                let systemInstruction = `Eres un asistente virtual de ventas en WhatsApp. Responde SIEMPRE en el idioma en que te escribe el cliente.\n`;
-                systemInstruction += `${aiConfig.prompt || 'Eres un vendedor amable y profesional.'}\n`;
+                let systemInstruction = `${aiConfig.prompt || 'Vendedor amable y profesional en WhatsApp.'}\n`;
                 if (aiConfig.context && aiConfig.context.trim()) {
                     systemInstruction += `\n${aiConfig.context}\n`;
                 }
                 if (aiConfig.orderInstructions && aiConfig.orderInstructions.trim()) {
-                    systemInstruction += `\nPara tomar pedidos: ${aiConfig.orderInstructions}\n`;
+                    systemInstruction += `\nPedidos: ${aiConfig.orderInstructions}\n`;
                 }
                 if (shouldIncludeProducts && products && products.length > 0) {
-                    systemInstruction += `\nPRODUCTOS DISPONIBLES:\n`;
+                    systemInstruction += `\nProductos:\n`;
                     products.forEach(p => {
                         systemInstruction += `• ${p.name} — ${p.price}`;
                         if (p.description && p.description.trim()) systemInstruction += ` (${p.description})`;

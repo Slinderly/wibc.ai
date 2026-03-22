@@ -113,36 +113,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── AI Config ──
     const buildWizardPrompt = (w) => {
-        const botName  = w.botName      || 'el asistente virtual';
-        const bizName  = w.businessName || 'el negocio';
-        const persona  = w.personality  || 'amable y profesional';
-        const langLine = w.defaultLanguage
-            ? `Responde SIEMPRE en ${w.defaultLanguage}, sin importar en qué idioma te escriba el cliente.`
-            : `Responde siempre en el idioma en que te escriba el cliente.`;
-        let p = `Eres ${botName}, el asistente virtual de ${bizName}. Tu personalidad es ${persona}. Tu objetivo es atender a los clientes, presentar los productos disponibles y tomar pedidos de forma clara y ordenada. ${langLine}\n\n`;
-        if (w.doesDelivery) {
-            const data = w.deliveryData || 'nombre completo, dirección, referencia';
-            p += `Realizamos envíos a domicilio. Para coordinar cualquier pedido con envío, solicita siempre al cliente: ${data}.\n`;
-        } else {
-            p += `Los pedidos son únicamente para retirar en tienda, no realizamos envíos a domicilio.\n`;
-        }
-        if (w.location)      p += `\nNuestra ubicación: ${w.location}.`;
-        if (w.businessPhone) p += `\nTeléfono directo del negocio: ${w.businessPhone}.`;
-        if (w.hoursFrom && w.hoursTo) p += `\nHorario de atención: de ${w.hoursFrom} a ${w.hoursTo}.`;
-        if (w.currency)      p += `\nTodos los precios están expresados en ${w.currency}.`;
-        if (w.askClientPhone) p += `\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.`;
+        const botName = w.botName      || 'el asistente';
+        const bizName = w.businessName || 'el negocio';
+        const persona = w.personality  || 'amable y profesional';
+        const lang    = w.defaultLanguage
+            ? `Responde siempre en ${w.defaultLanguage}.`
+            : `Idioma: el del cliente.`;
+
+        let p = `Eres ${botName}, bot de ventas de ${bizName}. Personalidad: ${persona}. ${lang}\n`;
+
+        p += w.doesDelivery
+            ? `Envíos a domicilio. Solicitar al cliente: ${w.deliveryData || 'nombre, dirección, referencia'}.\n`
+            : `Solo retiro en tienda, sin envíos.\n`;
+
+        const info = [
+            w.location                     && `Ubicación: ${w.location}`,
+            w.businessPhone                && `Tel: ${w.businessPhone}`,
+            (w.hoursFrom && w.hoursTo)     && `Horario: ${w.hoursFrom}–${w.hoursTo}`,
+            w.currency                     && `Moneda: ${w.currency}`,
+        ].filter(Boolean);
+        if (info.length) p += info.join('. ') + '.\n';
+
+        if (w.askClientPhone) p += `Pedir teléfono del cliente al confirmar pedido.\n`;
+
         if (w.acceptsReturns) {
-            const deadline = w.returnDeadline ? ` dentro de ${w.returnDeadline}` : '';
-            const contact  = w.cancelContact  ? ` a través de: ${w.cancelContact}` : ' contactando al negocio directamente';
-            p += `\nAceptamos cancelaciones de pedido${deadline}. IMPORTANTE: Si un cliente quiere cancelar, SIEMPRE debes pedirle que confirme explícitamente con "Sí, confirmo la cancelación" antes de proceder, ya que las cancelaciones no son inmediatas y requieren verificación. Una vez confirmado, indícale que se comunique${contact} para completar el proceso.`;
+            const deadline = w.returnDeadline ? ` (plazo: ${w.returnDeadline})` : '';
+            p += `Cancelaciones: aceptadas${deadline}. Pedir confirmación explícita del cliente antes de proceder.\n`;
         } else {
-            p += `\nNo aceptamos cancelaciones de pedido una vez confirmado. Si el cliente lo solicita, explícalo con amabilidad.`;
+            p += `Cancelaciones: no aceptadas tras confirmar pedido.\n`;
         }
-        if (w.responseLength === 'short') {
-            p += `\nResponde siempre de forma breve y directa, en pocas líneas. Evita mensajes largos.`;
-        } else if (w.responseLength === 'long') {
-            p += `\nResponde de forma completa y detallada, explicando bien cada punto para que el cliente quede bien informado.`;
-        }
+
+        if (w.responseLength === 'short') p += `Respuestas cortas y directas.\n`;
+        else if (w.responseLength === 'long') p += `Respuestas detalladas.\n`;
+
         return p.trim();
     };
 
@@ -171,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('wReturnsRow').style.display  = w.acceptsReturns ? 'block' : 'none';
         document.getElementById('wDeliveryData').value    = w.deliveryData    || '';
         document.getElementById('wReturnDeadline').value  = w.returnDeadline  || '';
-        document.getElementById('wCancelContact').value   = w.cancelContact   || '';
         document.getElementById('wDefaultLanguage').value = w.defaultLanguage || '';
         document.getElementById('wResponseLength').value  = w.responseLength  || 'medium';
     };
@@ -209,7 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
         askClientPhone: document.getElementById('wAskClientPhone').checked,
         acceptsReturns:  document.getElementById('wAcceptsReturns').checked,
         returnDeadline:  document.getElementById('wReturnDeadline').value.trim(),
-        cancelContact:   document.getElementById('wCancelContact').value.trim(),
         defaultLanguage: document.getElementById('wDefaultLanguage').value,
         responseLength:  document.getElementById('wResponseLength').value,
     });
