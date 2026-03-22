@@ -136,7 +136,8 @@ const orderAlreadySaved = (userId, jid, conversationSnapshot) => {
         const orders = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         const last = [...orders].reverse().find(o => o.jid === jid);
         if (!last) return false;
-        return last._historyLength === conversationSnapshot;
+        // Allow up to 8 new history entries before considering it a new order
+        return conversationSnapshot - last._historyLength <= 8;
     } catch (_) { return false; }
 };
 

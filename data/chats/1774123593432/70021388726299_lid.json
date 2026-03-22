@@ -340,5 +340,161 @@
     "text": "¡Claro que sí! Con gusto te ayudo en español.\n\nSi deseas cancelar tu pedido, recuerda que tienes 5 minutos para hacerlo contactando directamente al **64770568**. ¿Hay algo más en lo que pueda ayudarte?",
     "ts": "2026-03-22T01:19:23.447Z",
     "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Quero cancelar mi pedido",
+    "ts": "2026-03-22T01:21:41.727Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Olá! Você pode cancelar seu pedido se foi feito há menos de 5 minutos. \n\nPor favor, entre em contato direto com o negócio pelo número **64770568** para realizar o cancelamento agora mesmo. Estou à disposição!",
+    "ts": "2026-03-22T01:21:44.508Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-22T01:22:44.005Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-22T01:22:44.248Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-22T01:22:47.828Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-22T01:22:47.938Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-22T01:23:30.968Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-22T01:23:31.322Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hoal",
+    "ts": "2026-03-22T01:24:09.099Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "¡Hola! Soy Wibca, el asistente de Slynderly. 😊 ¿En qué puedo ayudarte hoy? \n\nAtendemos de 9 am a 8 pm. ¡Dime qué producto te gustaría pedir!",
+    "ts": "2026-03-22T01:24:12.451Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Que vendes",
+    "ts": "2026-03-22T01:24:17.768Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "¡Hola! Actualmente tenemos:\n\n• **Pipocas de pollo** — 66 BS (solo quedan 10 unidades).\n\n¿Te gustaría realizar un pedido? Atendemos hasta las 8 pm.",
+    "ts": "2026-03-22T01:24:20.245Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Si quero",
+    "ts": "2026-03-22T01:24:37.970Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "¡Excelente elección! 🍿 Para coordinar tu pedido de Pipocas de pollo (66 BS), por favor envíame los siguientes datos:\n\n• Nombre completo\n• Número de celular\n• Ubicación exacta para el envío\n\n¡Quedo atento!",
+    "ts": "2026-03-22T01:24:40.179Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Abraham huaygua paye 64774927 avenida satélite calle 8 puerta 2 letrero snack maria",
+    "ts": "2026-03-22T01:25:07.861Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "¡Perfecto, Abraham! Tu pedido de Pipocas de pollo (66 BS) ha sido registrado. \n\nLo enviaremos a la Av. Satélite, calle 8. Por favor, confírmame si el **64774927** es tu número de celular para coordinar la entrega. 😊",
+    "ts": "2026-03-22T01:25:11.925Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Si",
+    "ts": "2026-03-22T01:25:22.387Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "¡Excelente, Abraham! Tu pedido de Pipocas de pollo (66 BS) ha sido confirmado y está en camino. 🍿\n\nSi necesitas algo más o deseas cancelar (tienes 5 minutos), contáctanos al **64770568**. ¡Gracias por tu compra! 😊",
+    "ts": "2026-03-22T01:25:25.323Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Me arrepenti quero cancelar mi pedido",
+    "ts": "2026-03-22T01:25:46.361Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Entendido, Abraham. Para cancelar tu pedido, por favor comunícate de inmediato al **64770568**. \n\nRecuerda que aceptamos cancelaciones solo dentro de los primeros 5 minutos. ¡Quedamos atentos!",
+    "ts": "2026-03-22T01:25:50.047Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Tú cancelamelo",
+    "ts": "2026-03-22T01:26:13.603Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "🤖 [Wibc.ai] Lo siento, hubo un problema con el proveedor de IA. Revisa tu API Key o el modelo configurado.",
+    "ts": "2026-03-22T01:26:13.835Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Hola",
+    "ts": "2026-03-22T01:26:48.689Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Lo siento, Abraham, por políticas de seguridad del negocio, las cancelaciones deben ser gestionadas directamente a través del número **64770568**. Por favor, comunícate con ellos lo antes posible para procesar tu solicitud.",
+    "ts": "2026-03-22T01:26:50.384Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "user",
+    "text": "Porfa tú cancela mi pedido",
+    "ts": "2026-03-22T01:27:48.733Z",
+    "jid": "70021388726299@lid"
+  },
+  {
+    "role": "bot",
+    "text": "Entiendo perfectamente, Abraham, pero como asistente virtual, no tengo la facultad técnica para realizar cancelaciones directamente en el sistema de despacho. \n\nPor favor, escribe o llama ahora mismo al **64770568** para que el personal pueda retirar tu pedido antes de que salga. ¡Es la forma más rápida y segura de cancelarlo!",
+    "ts": "2026-03-22T01:27:49.768Z",
+    "jid": "70021388726299@lid"
   }
 ]

@@ -133,7 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (w.askClientPhone) p += `\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.`;
         if (w.acceptsReturns) {
             const deadline = w.returnDeadline ? ` dentro de ${w.returnDeadline}` : '';
-            p += `\nAceptamos cancelaciones de pedido${deadline}. Si el cliente desea cancelar, indícale que puede hacerlo contactando al negocio.`;
+            const contact  = w.cancelContact  ? ` a través de: ${w.cancelContact}` : ' contactando al negocio directamente';
+            p += `\nAceptamos cancelaciones de pedido${deadline}. IMPORTANTE: Si un cliente quiere cancelar, SIEMPRE debes pedirle que confirme explícitamente con "Sí, confirmo la cancelación" antes de proceder, ya que las cancelaciones no son inmediatas y requieren verificación. Una vez confirmado, indícale que se comunique${contact} para completar el proceso.`;
         } else {
             p += `\nNo aceptamos cancelaciones de pedido una vez confirmado. Si el cliente lo solicita, explícalo con amabilidad.`;
         }
@@ -170,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('wReturnsRow').style.display  = w.acceptsReturns ? 'block' : 'none';
         document.getElementById('wDeliveryData').value    = w.deliveryData    || '';
         document.getElementById('wReturnDeadline').value  = w.returnDeadline  || '';
+        document.getElementById('wCancelContact').value   = w.cancelContact   || '';
         document.getElementById('wDefaultLanguage').value = w.defaultLanguage || '';
         document.getElementById('wResponseLength').value  = w.responseLength  || 'medium';
     };
@@ -207,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         askClientPhone: document.getElementById('wAskClientPhone').checked,
         acceptsReturns:  document.getElementById('wAcceptsReturns').checked,
         returnDeadline:  document.getElementById('wReturnDeadline').value.trim(),
+        cancelContact:   document.getElementById('wCancelContact').value.trim(),
         defaultLanguage: document.getElementById('wDefaultLanguage').value,
         responseLength:  document.getElementById('wResponseLength').value,
     });
