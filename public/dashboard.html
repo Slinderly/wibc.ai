@@ -215,6 +215,27 @@
                                     </label>
                                 </label>
                             </div>
+                            <div class="input-group" style="grid-column:1/-1;">
+                                <label class="wizard-toggle-label">
+                                    ¿El negocio acepta devoluciones?
+                                    <label class="wizard-switch">
+                                        <input type="checkbox" id="wAcceptsReturns">
+                                        <span class="wizard-slider"></span>
+                                    </label>
+                                </label>
+                            </div>
+                            <div id="wReturnsRow" class="input-group" style="grid-column:1/-1;display:none;">
+                                <label>¿Cuánto tiempo tiene el cliente para hacer una devolución?</label>
+                                <input type="text" id="wReturnDeadline" placeholder="Ej: 7 días, 24 horas, 48 horas desde la entrega">
+                            </div>
+                            <div class="input-group" style="grid-column:1/-1;">
+                                <label>¿Cómo debe responder el bot?</label>
+                                <select id="wResponseLength">
+                                    <option value="short">Respuestas cortas y directas</option>
+                                    <option value="medium" selected>Respuestas moderadas</option>
+                                    <option value="long">Respuestas detalladas y completas</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="wizard-preview-wrap" id="wizardPreviewWrap" style="display:none;">
                             <div class="wizard-preview-label">Prompt generado (puedes editarlo):</div>

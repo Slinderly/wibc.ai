@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "id": "order_1774141337777",
+    "jid": "70021388726299@lid",
+    "phone": "+70021388726299",
+    "customerName": "Abraham Huaygua Paye",
+    "items": [
+      {
+        "name": "Pipocas de pollo",
+        "quantity": "1",
+        "price": "66 BS"
+      }
+    ],
+    "address": "Avenida Satélite, calle 8, puerta 2",
+    "paymentMethod": null,
+    "total": "66 BS",
+    "notes": "El número de celular proporcionado (64770568) coincide con el número directo del negocio. El bot solicita confirmación si es el número personal de contacto para coordinar la entrega.",
+    "status": "cancelled",
+    "timestamp": "2026-03-22T01:02:17.777Z",
+    "_historyLength": 20
+  }
+]

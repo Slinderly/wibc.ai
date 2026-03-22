@@ -128,6 +128,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (w.hoursFrom && w.hoursTo) p += `\nHorario de atención: de ${w.hoursFrom} a ${w.hoursTo}.`;
         if (w.currency)      p += `\nTodos los precios están expresados en ${w.currency}.`;
         if (w.askClientPhone) p += `\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.`;
+        if (w.acceptsReturns) {
+            const deadline = w.returnDeadline ? ` dentro de ${w.returnDeadline}` : '';
+            p += `\nAceptamos devoluciones${deadline}. Si el cliente pide una devolución, indícale que puede gestionarla contactando al negocio directamente.`;
+        } else {
+            p += `\nNo aceptamos devoluciones. Si el cliente lo solicita, explícalo con amabilidad.`;
+        }
+        if (w.responseLength === 'short') {
+            p += `\nResponde siempre de forma breve y directa, en pocas líneas. Evita mensajes largos.`;
+        } else if (w.responseLength === 'long') {
+            p += `\nResponde de forma completa y detallada, explicando bien cada punto para que el cliente quede bien informado.`;
+        }
         return p.trim();
     };
 
@@ -149,10 +160,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('wHoursFrom').value     = w.hoursFrom     || '';
         document.getElementById('wHoursTo').value       = w.hoursTo       || '';
         document.getElementById('wCurrency').value      = w.currency      || '';
-        document.getElementById('wDoesDelivery').checked   = !!w.doesDelivery;
-        document.getElementById('wAskClientPhone').checked = w.askClientPhone !== false;
+        document.getElementById('wDoesDelivery').checked    = !!w.doesDelivery;
+        document.getElementById('wAskClientPhone').checked  = w.askClientPhone !== false;
+        document.getElementById('wAcceptsReturns').checked  = !!w.acceptsReturns;
         document.getElementById('wDeliveryRow').style.display = w.doesDelivery ? 'block' : 'none';
-        document.getElementById('wDeliveryData').value  = w.deliveryData  || '';
+        document.getElementById('wReturnsRow').style.display  = w.acceptsReturns ? 'block' : 'none';
+        document.getElementById('wDeliveryData').value   = w.deliveryData   || '';
+        document.getElementById('wReturnDeadline').value = w.returnDeadline || '';
+        document.getElementById('wResponseLength').value = w.responseLength || 'medium';
     };
 
     const setPromptMode = (mode) => {
@@ -170,18 +185,25 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('wDeliveryRow').style.display = e.target.checked ? 'block' : 'none';
     });
 
+    document.getElementById('wAcceptsReturns').addEventListener('change', (e) => {
+        document.getElementById('wReturnsRow').style.display = e.target.checked ? 'block' : 'none';
+    });
+
     const getWizardData = () => ({
-        botName:       document.getElementById('wBotName').value.trim(),
-        businessName:  document.getElementById('wBusinessName').value.trim(),
-        personality:   document.getElementById('wPersonality').value.trim(),
-        location:      document.getElementById('wLocation').value.trim(),
-        businessPhone: document.getElementById('wBusinessPhone').value.trim(),
-        hoursFrom:     document.getElementById('wHoursFrom').value.trim(),
-        hoursTo:       document.getElementById('wHoursTo').value.trim(),
-        currency:      document.getElementById('wCurrency').value.trim(),
-        doesDelivery:  document.getElementById('wDoesDelivery').checked,
-        deliveryData:  document.getElementById('wDeliveryData').value.trim(),
-        askClientPhone:document.getElementById('wAskClientPhone').checked,
+        botName:        document.getElementById('wBotName').value.trim(),
+        businessName:   document.getElementById('wBusinessName').value.trim(),
+        personality:    document.getElementById('wPersonality').value.trim(),
+        location:       document.getElementById('wLocation').value.trim(),
+        businessPhone:  document.getElementById('wBusinessPhone').value.trim(),
+        hoursFrom:      document.getElementById('wHoursFrom').value.trim(),
+        hoursTo:        document.getElementById('wHoursTo').value.trim(),
+        currency:       document.getElementById('wCurrency').value.trim(),
+        doesDelivery:   document.getElementById('wDoesDelivery').checked,
+        deliveryData:   document.getElementById('wDeliveryData').value.trim(),
+        askClientPhone: document.getElementById('wAskClientPhone').checked,
+        acceptsReturns: document.getElementById('wAcceptsReturns').checked,
+        returnDeadline: document.getElementById('wReturnDeadline').value.trim(),
+        responseLength: document.getElementById('wResponseLength').value,
     });
 
     document.getElementById('wizardPreviewBtn').addEventListener('click', () => {

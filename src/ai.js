@@ -111,6 +111,24 @@ const saveOrder = (userId, order) => {
     fs.writeFileSync(filePath, JSON.stringify(orders, null, 2));
 };
 
+const cancelOrderByJid = (userId, jid) => {
+    const filePath = getOrdersPath(userId);
+    if (!fs.existsSync(filePath)) return false;
+    try {
+        let orders = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        let changed = false;
+        for (let i = orders.length - 1; i >= 0; i--) {
+            if (orders[i].jid === jid && orders[i].status !== 'cancelled') {
+                orders[i].status = 'cancelled';
+                changed = true;
+                break;
+            }
+        }
+        if (changed) fs.writeFileSync(filePath, JSON.stringify(orders, null, 2));
+        return changed;
+    } catch (_) { return false; }
+};
+
 const orderAlreadySaved = (userId, jid, conversationSnapshot) => {
     const filePath = getOrdersPath(userId);
     if (!fs.existsSync(filePath)) return false;
@@ -179,6 +197,46 @@ Responde SOLO con el JSON o la palabra null. Sin explicaciones.`;
         console.log(`[wibc.ai] 🛒 Pedido IA guardado para ${userId} desde ${cleanPhone}`);
     } catch (e) {
         console.error('[wibc.ai] Error detección pedido:', e.message);
+    }
+};
+
+// ── AI cancellation detection ─────────────────────────────────────────────────
+const detectAndCancelOrder = async (userId, jid, history, aiConfig) => {
+    if (!aiConfig.apiKey || !aiConfig.apiKey.trim()) return;
+    if (history.length < 2) return;
+
+    const filePath = getOrdersPath(userId);
+    if (!fs.existsSync(filePath)) return;
+    try {
+        const orders = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        const hasActive = orders.some(o => o.jid === jid && o.status !== 'cancelled');
+        if (!hasActive) return;
+    } catch (_) { return; }
+
+    const historyText = history.slice(-10)
+        .map(h => `${h.role === 'user' ? 'Cliente' : 'Bot'}: ${h.text}`)
+        .join('\n');
+
+    const cancelPrompt = `Analiza los últimos mensajes de esta conversación de WhatsApp.
+
+Conversación:
+${historyText}
+
+Tu tarea: ¿El cliente está CANCELANDO o pidiendo ELIMINAR su pedido? Responde únicamente con: SI o NO. Sin explicaciones.`;
+
+    try {
+        const model = (aiConfig.model && aiConfig.model.trim()) ? aiConfig.model.trim() : 'gemini-2.5-flash';
+        const ai = new GoogleGenAI({ apiKey: aiConfig.apiKey });
+        const result = await ai.models.generateContent({ model, contents: cancelPrompt });
+        const raw = (result.text || '').trim().toUpperCase();
+        if (raw.startsWith('SI') || raw.startsWith('SÍ')) {
+            const cancelled = cancelOrderByJid(userId, jid);
+            if (cancelled) {
+                console.log(`[wibc.ai] ❌ Pedido cancelado por cliente: ${userId} / ${jid}`);
+            }
+        }
+    } catch (e) {
+        console.error('[wibc.ai] Error detección cancelación:', e.message);
     }
 };
 
@@ -508,6 +566,8 @@ const generateAIResponse = async (userId, incomingMessage, jid = '') => {
                 const cleanPhone = jid.split('@')[0];
                 detectAndSaveOrder(userId, jid, '+' + cleanPhone, currentHistory, aiConfig)
                     .catch(e => console.error('[wibc.ai] detectOrder error:', e.message));
+                detectAndCancelOrder(userId, jid, currentHistory, aiConfig)
+                    .catch(e => console.error('[wibc.ai] detectCancel error:', e.message));
 
                 resolve(reply);
                 return;
