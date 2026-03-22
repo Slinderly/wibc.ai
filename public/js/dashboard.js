@@ -130,9 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (w.askClientPhone) p += `\nAl confirmar cualquier pedido, solicita siempre el número de teléfono del cliente para coordinar.`;
         if (w.acceptsReturns) {
             const deadline = w.returnDeadline ? ` dentro de ${w.returnDeadline}` : '';
-            p += `\nAceptamos devoluciones${deadline}. Si el cliente pide una devolución, indícale que puede gestionarla contactando al negocio directamente.`;
+            p += `\nAceptamos cancelaciones de pedido${deadline}. Si el cliente desea cancelar, indícale que puede hacerlo contactando al negocio.`;
         } else {
-            p += `\nNo aceptamos devoluciones. Si el cliente lo solicita, explícalo con amabilidad.`;
+            p += `\nNo aceptamos cancelaciones de pedido una vez confirmado. Si el cliente lo solicita, explícalo con amabilidad.`;
         }
         if (w.responseLength === 'short') {
             p += `\nResponde siempre de forma breve y directa, en pocas líneas. Evita mensajes largos.`;
